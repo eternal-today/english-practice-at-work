@@ -16,10 +16,7 @@
     line-height: 1.6;
   }
   
-  .container {
-    max-width: 760px;
-    margin: 0 auto;
-  }
+  .container { max-width: 760px; margin: 0 auto; }
   
   .header {
     display: flex;
@@ -30,17 +27,8 @@
     border-bottom: 1px solid #e5e5e5;
   }
   
-  .title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #666;
-    letter-spacing: 0.5px;
-  }
-  
-  .progress {
-    font-size: 13px;
-    color: #888;
-  }
+  .title { font-size: 14px; font-weight: 600; color: #666; letter-spacing: 0.5px; }
+  .progress { font-size: 13px; color: #888; }
   
   .korean {
     font-size: 18px;
@@ -92,18 +80,11 @@
     cursor: pointer;
     transition: all 0.15s;
     font-family: inherit;
-    position: relative;
   }
   
-  .chunk:hover {
-    border-color: #555;
-    background: #fafafa;
-  }
-  
-  .chunk.in-assembled {
-    background: #f0f0f0;
-    color: #333;
-  }
+  .chunk:hover { border-color: #555; background: #fafafa; }
+  .chunk.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .chunk.in-assembled { background: #f0f0f0; color: #333; }
   
   .chunk-key {
     display: inline-block;
@@ -111,13 +92,12 @@
     color: #999;
     margin-right: 6px;
     font-weight: 600;
+    min-width: 12px;
   }
   
-  .controls {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
+  .chunk.selected .chunk-key { color: #aaa; }
+  
+  .controls { display: flex; gap: 12px; margin-bottom: 24px; }
   
   button.action {
     padding: 10px 20px;
@@ -155,11 +135,7 @@
     color: #7a2a2a;
   }
   
-  .feedback .answer {
-    margin-top: 8px;
-    font-weight: 500;
-    color: #1a1a1a;
-  }
+  .feedback .answer { margin-top: 8px; font-weight: 500; color: #1a1a1a; }
   
   .hint {
     font-size: 12px;
@@ -168,11 +144,7 @@
     margin-top: 16px;
   }
   
-  .loading {
-    text-align: center;
-    padding: 40px;
-    color: #888;
-  }
+  .loading { text-align: center; padding: 40px; color: #888; }
 </style>
 </head>
 <body>
@@ -187,19 +159,20 @@
     </div>
     
     <div class="hint">
-      숫자키 1~9: 청크 선택 · Backspace: 마지막 청크 제거 · Enter: 정답 확인 · N: 다음 문제
+      0~9, a~f: 청크 토글 (선택/해제) · Enter: 정답 확인 / 다음 문제 · N: 다음 문제
     </div>
   </div>
 
 <script>
 // ===== 설정 =====
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwm3Htan4X_r_zVgyGgnuxKhp6OdOKJGwvpOfJLBM3t08R4x1H0o67z57FysVW7BiWN/exec'; // ← 여기에 GAS 웹앱 URL 입력
+const KEY_MAP = '0123456789abcdef'; // 최대 16개 청크
 
 // ===== 상태 =====
 let sentences = [];
 let currentIdx = 0;
-let pool = [];        // 남은 청크
-let assembled = [];   // 조립된 청크
+let chunks = [];      // [{ text, key, selected, orderInAssembled }]
+let assembledOrder = []; // 조립 순서대로 chunk index 저장
 let attemptCount = 0;
 let isAnswered = false;
 
@@ -226,8 +199,21 @@ function loadSentence(idx) {
   
   currentIdx = idx;
   const s = sentences[idx];
-  pool = shuffle([...s.chunks]).map((text, i) => ({ text, id: i }));
-  assembled = [];
+  
+  // 청크에 고정 키 부여 (셔플 후 0,1,2... 순서로 키 할당)
+  const shuffled = shuffle([...s.chunks]);
+  if (shuffled.length > KEY_MAP.length) {
+    document.getElementById('app').innerHTML = 
+      `<div class="feedback incorrect">청크가 너무 많습니다 (${shuffled.length}개). 최대 ${KEY_MAP.length}개까지 지원합니다.</div>`;
+    return;
+  }
+  
+  chunks = shuffled.map((text, i) => ({
+    text,
+    key: KEY_MAP[i],
+    selected: false
+  }));
+  assembledOrder = [];
   attemptCount = 0;
   isAnswered = false;
   
@@ -239,25 +225,28 @@ function loadSentence(idx) {
 function render() {
   const s = sentences[currentIdx];
   
+  const assembledHTML = assembledOrder.map(i => {
+    const c = chunks[i];
+    return `<button class="chunk in-assembled" onclick="toggleChunk(${i})">
+      <span class="chunk-key">${c.key}</span>${c.text}
+    </button>`;
+  }).join('');
+  
+  const poolHTML = chunks.map((c, i) => {
+    return `<button class="chunk ${c.selected ? 'selected' : ''}" onclick="toggleChunk(${i})">
+      <span class="chunk-key">${c.key}</span>${c.text}
+    </button>`;
+  }).join('');
+  
   document.getElementById('app').innerHTML = `
     <div class="korean">${s.korean_text}</div>
     
-    <div class="assembled" id="assembled">
-      ${assembled.map((c, i) => 
-        `<button class="chunk in-assembled" onclick="removeChunk(${i})">${c.text}</button>`
-      ).join('')}
-    </div>
+    <div class="assembled" id="assembled">${assembledHTML}</div>
     
-    <div class="chunks-pool" id="pool">
-      ${pool.map((c, i) => 
-        `<button class="chunk" onclick="addChunk(${i})">
-          <span class="chunk-key">${i + 1}</span>${c.text}
-        </button>`
-      ).join('')}
-    </div>
+    <div class="chunks-pool" id="pool">${poolHTML}</div>
     
     <div class="controls">
-      <button class="action" onclick="checkAnswer()" ${assembled.length === 0 ? 'disabled' : ''}>
+      <button class="action" onclick="checkAnswer()" ${assembledOrder.length === 0 ? 'disabled' : ''}>
         정답 확인 (Enter)
       </button>
       <button class="action secondary" onclick="nextSentence()">
@@ -269,28 +258,30 @@ function render() {
   `;
 }
 
-// ===== 청크 조작 =====
-function addChunk(poolIdx) {
+// ===== 청크 토글 =====
+function toggleChunk(idx) {
   if (isAnswered) return;
-  const chunk = pool.splice(poolIdx, 1)[0];
-  assembled.push(chunk);
-  render();
-}
-
-function removeChunk(asmIdx) {
-  if (isAnswered) return;
-  const chunk = assembled.splice(asmIdx, 1)[0];
-  pool.push(chunk);
+  const c = chunks[idx];
+  
+  if (c.selected) {
+    // 해제: assembledOrder에서 제거
+    c.selected = false;
+    assembledOrder = assembledOrder.filter(i => i !== idx);
+  } else {
+    // 선택: assembledOrder 맨 끝에 추가
+    c.selected = true;
+    assembledOrder.push(idx);
+  }
   render();
 }
 
 // ===== 정답 확인 =====
 function checkAnswer() {
-  if (assembled.length === 0 || isAnswered) return;
+  if (assembledOrder.length === 0 || isAnswered) return;
   
   attemptCount++;
   const s = sentences[currentIdx];
-  const userText = assembled.map(c => c.text).join(' ');
+  const userText = assembledOrder.map(i => chunks[i].text).join(' ');
   const correctText = s.chunks.join(' ');
   const isCorrect = userText === correctText;
   
@@ -307,9 +298,7 @@ function checkAnswer() {
     `;
   } else {
     feedbackArea.innerHTML = `
-      <div class="feedback incorrect">
-        다시 시도해보세요
-      </div>
+      <div class="feedback incorrect">다시 시도해보세요</div>
     `;
   }
 }
@@ -339,19 +328,24 @@ async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
 
 // ===== 키보드 입력 =====
 document.addEventListener('keydown', (e) => {
-  if (e.key >= '1' && e.key <= '9') {
-    const idx = parseInt(e.key) - 1;
-    if (idx < pool.length) addChunk(idx);
-  } else if (e.key === 'Backspace' && !e.target.matches('input, textarea')) {
-    e.preventDefault();
-    if (assembled.length > 0) removeChunk(assembled.length - 1);
+  if (e.target.matches('input, textarea')) return;
+  
+  const key = e.key.toLowerCase();
+  
+  if (KEY_MAP.includes(key)) {
+    const idx = KEY_MAP.indexOf(key);
+    if (idx < chunks.length) {
+      e.preventDefault();
+      toggleChunk(idx);
+    }
   } else if (e.key === 'Enter') {
+    e.preventDefault();
     if (isAnswered) {
       nextSentence();
     } else {
       checkAnswer();
     }
-  } else if (e.key.toLowerCase() === 'n') {
+  } else if (key === 'n' && isAnswered) {
     nextSentence();
   }
 });
