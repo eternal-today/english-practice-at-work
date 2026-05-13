@@ -165,14 +165,15 @@
 
 <script>
 // ===== 설정 =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwm3Htan4X_r_zVgyGgnuxKhp6OdOKJGwvpOfJLBM3t08R4x1H0o67z57FysVW7BiWN/exec'; // ← 여기에 GAS 웹앱 URL 입력
-const KEY_MAP = '0123456789abcdef'; // 최대 16개 청크
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwm3Htan4X_r_zVgyGgnuxKhp6OdOKJGwvpOfJLBM3t08R4x1H0o67z57FysVW7BiWN/exec'; // ← 본인 GAS 웹앱 URL
+const KEY_MAP = '0123456789abcdef';
+const AUTO_GENERATE_COUNT = 5;
 
 // ===== 상태 =====
 let sentences = [];
 let currentIdx = 0;
-let chunks = [];      // [{ text, key, selected, orderInAssembled }]
-let assembledOrder = []; // 조립 순서대로 chunk index 저장
+let chunks = [];
+let assembledOrder = [];
 let attemptCount = 0;
 let isAnswered = false;
 
@@ -183,9 +184,28 @@ async function init() {
     const data = await res.json();
     sentences = shuffle(data.sentences);
     loadSentence(0);
+    
+    // 백그라운드로 새 문장 생성 (await 안 함)
+    generateInBackground();
   } catch (err) {
     document.getElementById('app').innerHTML = 
       `<div class="feedback incorrect">데이터를 불러오지 못했습니다: ${err.message}</div>`;
+  }
+}
+
+// ===== 백그라운드 문장 생성 =====
+async function generateInBackground() {
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'generateSentences',
+        count: AUTO_GENERATE_COUNT
+      })
+    });
+    console.log('백그라운드 문장 생성 완료');
+  } catch (err) {
+    console.error('문장 생성 실패:', err);
   }
 }
 
@@ -193,18 +213,17 @@ async function init() {
 function loadSentence(idx) {
   if (idx >= sentences.length) {
     document.getElementById('app').innerHTML = 
-      `<div class="feedback correct">모든 문제를 완료했습니다. 새로고침하면 다시 시작합니다.</div>`;
+      `<div class="feedback correct">모든 문제를 완료했습니다. 새로고침하면 새로 생성된 문장과 함께 다시 시작합니다.</div>`;
     return;
   }
   
   currentIdx = idx;
   const s = sentences[idx];
-  
-  // 청크에 고정 키 부여 (셔플 후 0,1,2... 순서로 키 할당)
   const shuffled = shuffle([...s.chunks]);
+  
   if (shuffled.length > KEY_MAP.length) {
     document.getElementById('app').innerHTML = 
-      `<div class="feedback incorrect">청크가 너무 많습니다 (${shuffled.length}개). 최대 ${KEY_MAP.length}개까지 지원합니다.</div>`;
+      `<div class="feedback incorrect">청크가 너무 많습니다 (${shuffled.length}개).</div>`;
     return;
   }
   
@@ -240,11 +259,8 @@ function render() {
   
   document.getElementById('app').innerHTML = `
     <div class="korean">${s.korean_text}</div>
-    
     <div class="assembled" id="assembled">${assembledHTML}</div>
-    
     <div class="chunks-pool" id="pool">${poolHTML}</div>
-    
     <div class="controls">
       <button class="action" onclick="checkAnswer()" ${assembledOrder.length === 0 ? 'disabled' : ''}>
         정답 확인 (Enter)
@@ -253,7 +269,6 @@ function render() {
         다음 문제 (N)
       </button>
     </div>
-    
     <div id="feedback-area"></div>
   `;
 }
@@ -264,11 +279,9 @@ function toggleChunk(idx) {
   const c = chunks[idx];
   
   if (c.selected) {
-    // 해제: assembledOrder에서 제거
     c.selected = false;
     assembledOrder = assembledOrder.filter(i => i !== idx);
   } else {
-    // 선택: assembledOrder 맨 끝에 추가
     c.selected = true;
     assembledOrder.push(idx);
   }
@@ -276,7 +289,7 @@ function toggleChunk(idx) {
 }
 
 // ===== 정답 확인 =====
-function checkAnswer() {
+async function checkAnswer() {
   if (assembledOrder.length === 0 || isAnswered) return;
   
   attemptCount++;
@@ -297,9 +310,37 @@ function checkAnswer() {
       </div>
     `;
   } else {
+    // 로딩 표시
     feedbackArea.innerHTML = `
-      <div class="feedback incorrect">다시 시도해보세요</div>
+      <div class="feedback incorrect">
+        AI가 분석 중입니다...
+      </div>
     `;
+    
+    // AI 힌트 요청
+    try {
+      const hintRes = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'analyzeError',
+          korean_text: s.korean_text,
+          correct_answer: correctText,
+          user_input: userText,
+          attempt_number: attemptCount
+        })
+      });
+      const hintData = await hintRes.json();
+      
+      feedbackArea.innerHTML = `
+        <div class="feedback incorrect">
+          ${hintData.hint || '힌트를 가져오지 못했습니다.'}
+        </div>
+      `;
+    } catch (err) {
+      feedbackArea.innerHTML = `
+        <div class="feedback incorrect">다시 시도해보세요 (AI 힌트 오류: ${err.message})</div>
+      `;
+    }
   }
 }
 
@@ -329,7 +370,6 @@ async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
 // ===== 키보드 입력 =====
 document.addEventListener('keydown', (e) => {
   if (e.target.matches('input, textarea')) return;
-  
   const key = e.key.toLowerCase();
   
   if (KEY_MAP.includes(key)) {
@@ -340,11 +380,8 @@ document.addEventListener('keydown', (e) => {
     }
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (isAnswered) {
-      nextSentence();
-    } else {
-      checkAnswer();
-    }
+    if (isAnswered) nextSentence();
+    else checkAnswer();
   } else if (key === 'n' && isAnswered) {
     nextSentence();
   }
