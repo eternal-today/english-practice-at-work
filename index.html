@@ -497,13 +497,45 @@ async function checkTyping() {
   }
 }
 
+// ===== 정규화 & diff =====
+function normalizeForCompare(t) {
+  return t.toLowerCase().replace(/[’]/g, "'").replace(/[.,!?"“”]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function renderMinorText(userInput, minor) {
+  // 내 문장과 소극적 수정이 사실상 같은지 판단
+  if (normalizeForCompare(userInput) === normalizeForCompare(minor)) {
+    return { same: true, html: '' };
+  }
+  // 단어 단위로 바뀐 부분만 강조
+  const uw = userInput.split(/\s+/);
+  const mw = minor.split(/\s+/);
+  const marked = mw.map((w, i) =>
+    (normalizeForCompare(uw[i] || '') !== normalizeForCompare(w))
+      ? `<span style="color:#c0392b; font-weight:600; text-decoration:underline;">${w}</span>`
+      : w
+  ).join(' ');
+  return { same: false, html: marked };
+}
+ 
 function renderGrade(g, s) {
   const verdict = g.verdict || 'partial';
   const labelMap = { pass: '통과', partial: '부분 통과', retry: '다시 시도' };
   const fb = document.getElementById('feedback-area');
 
-  // pass가 아니면 모범답은 감춰서 재시도 유도, minor/native는 힌트로 제공
-  const showReference = verdict === 'pass';
+  const userInput = document.getElementById('typingInput').value.trim();
+  const minorResult = g.minor ? renderMinorText(userInput, g.minor) : null;
+
+  let minorRow = '';
+  if (minorResult) {
+    if (minorResult.same) {
+      minorRow = `<div class="grade-row"><div class="label">소극적 수정 · 문법만</div>
+        <div class="text" style="color:#2a5a2a;">문법 오류 없음 · 작성하신 문장을 그대로 쓰셔도 좋습니다</div></div>`;
+    } else {
+      minorRow = `<div class="grade-row minor"><div class="label">소극적 수정 · 문법만 (밑줄이 고친 부분)</div>
+        <div class="text">${minorResult.html}</div></div>`;
+    }
+  }
 
   fb.innerHTML = `
     <div class="grade ${verdict}">
@@ -512,9 +544,8 @@ function renderGrade(g, s) {
         ${verdict === 'retry' ? '의미를 다시 확인해보세요' : ''}
       </div>
       <div class="grade-body">
-        ${g.minor ? `<div class="grade-row minor"><div class="label">소극적 수정 · 문법만</div><div class="text">${g.minor}</div></div>` : ''}
+        ${minorRow}
         ${(verdict !== 'retry' && g.native) ? `<div class="grade-row native"><div class="label">적극적 수정 · 네이티브 AL</div><div class="text">${g.native}</div></div>` : ''}
-        ${showReference ? `<div class="grade-row"><div class="label">참고 · 원래 의도</div><div class="text">${s.english_text}</div></div>` : ''}
         ${g.comment ? `<div class="grade-comment">${g.comment}</div>` : ''}
       </div>
     </div>
