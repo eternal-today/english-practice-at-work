@@ -6,7 +6,7 @@
 <title>Stealth AL</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
     background: #fafafa;
@@ -15,92 +15,140 @@
     padding: 40px 20px;
     line-height: 1.6;
   }
-  
-  .container { max-width: 760px; margin: 0 auto; }
-  
+
+  .container { max-width: 720px; margin: 0 auto; }
+
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 32px;
-    padding-bottom: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 14px;
     border-bottom: 1px solid #e5e5e5;
   }
-  
-  .title { font-size: 14px; font-weight: 600; color: #666; letter-spacing: 0.5px; }
+  .title { font-size: 13px; font-weight: 600; color: #666; letter-spacing: 1px; }
   .progress { font-size: 13px; color: #888; }
-  
+
+  /* ===== 시작 화면 ===== */
+  .start-panel {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 32px;
+  }
+  .start-panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 24px; color: #333; }
+  .option-group { margin-bottom: 20px; }
+  .option-label { font-size: 12px; color: #999; margin-bottom: 8px; display: block; }
+  .option-row { display: flex; gap: 8px; }
+  .opt-btn {
+    padding: 8px 18px;
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .opt-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  select.opt-select {
+    padding: 8px 12px;
+    border: 1px solid #d4d4d4;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+  }
+
+  /* ===== 문제 화면 ===== */
+  .mode-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #888;
+    background: #f0f0f0;
+    padding: 3px 10px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+  }
   .korean {
     font-size: 18px;
     font-weight: 500;
-    padding: 24px;
+    padding: 22px;
     background: #fff;
     border: 1px solid #e5e5e5;
     border-radius: 6px;
-    margin-bottom: 24px;
-    color: #222;
+    margin-bottom: 20px;
   }
-  
+
+  .typing-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+    font-family: inherit;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .typing-input:focus { border-color: #1a1a1a; }
+
+  .hint-line {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 16px;
+    min-height: 20px;
+  }
+  .hint-line .hint-chunk {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 6px;
+    color: #555;
+  }
+
   .assembled {
-    min-height: 80px;
-    padding: 16px;
+    min-height: 70px;
+    padding: 14px;
     background: #fff;
     border: 1px solid #e5e5e5;
     border-radius: 6px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-content: flex-start;
   }
-  
-  .assembled:empty::before {
-    content: '여기에 청크가 조립됩니다';
-    color: #bbb;
-    font-size: 14px;
-  }
-  
+  .assembled:empty::before { content: '여기에 청크가 조립됩니다'; color: #bbb; font-size: 13px; }
+
   .chunks-pool {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 24px;
-    padding: 16px;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 14px;
     background: #f5f5f5;
     border-radius: 6px;
-    min-height: 80px;
   }
-  
   .chunk {
-    padding: 10px 16px;
+    padding: 9px 14px;
     background: #fff;
     border: 1px solid #d4d4d4;
     border-radius: 4px;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
-    transition: all 0.15s;
     font-family: inherit;
   }
-  
-  .chunk:hover { border-color: #555; background: #fafafa; }
+  .chunk:hover { border-color: #555; }
   .chunk.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-  .chunk.in-assembled { background: #f0f0f0; color: #333; }
-  
-  .chunk-key {
-    display: inline-block;
-    font-size: 11px;
-    color: #999;
-    margin-right: 6px;
-    font-weight: 600;
-    min-width: 12px;
-  }
-  
+  .chunk.in-assembled { background: #f0f0f0; }
+  .chunk-key { font-size: 11px; color: #999; margin-right: 6px; font-weight: 600; }
   .chunk.selected .chunk-key { color: #aaa; }
-  
-  .controls { display: flex; gap: 12px; margin-bottom: 24px; }
-  
+
+  .controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   button.action {
-    padding: 10px 20px;
+    padding: 10px 18px;
     font-size: 14px;
     font-weight: 500;
     background: #1a1a1a;
@@ -110,40 +158,50 @@
     cursor: pointer;
     font-family: inherit;
   }
-  
   button.action:hover { background: #333; }
   button.action.secondary { background: #fff; color: #1a1a1a; border: 1px solid #d4d4d4; }
   button.action.secondary:hover { background: #f5f5f5; }
   button.action:disabled { opacity: 0.4; cursor: not-allowed; }
-  
+
   .feedback {
-    padding: 16px 20px;
+    padding: 14px 18px;
     border-radius: 6px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     font-size: 14px;
   }
-  
-  .feedback.correct {
-    background: #f0f7f0;
-    border: 1px solid #c8e0c8;
-    color: #2a5a2a;
+  .feedback.correct { background: #f0f7f0; border: 1px solid #c8e0c8; color: #2a5a2a; }
+  .feedback.incorrect { background: #faf0f0; border: 1px solid #e0c8c8; color: #7a2a2a; }
+  .feedback .answer { margin-top: 6px; font-weight: 500; color: #1a1a1a; font-size: 15px; }
+  .feedback .diff-wrong { color: #c0392b; text-decoration: underline; font-weight: 600; }
+
+  .pattern-note {
+    padding: 12px 18px;
+    background: #f7f7f2;
+    border: 1px solid #e0e0d0;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #55552a;
   }
-  
-  .feedback.incorrect {
-    background: #faf0f0;
-    border: 1px solid #e0c8c8;
-    color: #7a2a2a;
+
+  /* ===== 요약 화면 ===== */
+  .summary-panel {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
   }
-  
-  .feedback .answer { margin-top: 8px; font-weight: 500; color: #1a1a1a; }
-  
-  .hint {
+  .summary-panel h2 { font-size: 15px; font-weight: 600; color: #666; margin-bottom: 24px; }
+  .big-number { font-size: 42px; font-weight: 700; margin-bottom: 6px; }
+  .sub-metric { font-size: 13px; color: #888; margin-bottom: 28px; }
+
+  .hint-bar {
     font-size: 12px;
     color: #999;
     text-align: center;
     margin-top: 16px;
   }
-  
   .loading { text-align: center; padding: 40px; color: #888; }
 </style>
 </head>
@@ -151,133 +209,247 @@
   <div class="container">
     <div class="header">
       <div class="title">STEALTH AL</div>
-      <div class="progress" id="progress">—</div>
+      <div class="progress" id="progress"></div>
     </div>
-    
-    <div id="app">
-      <div class="loading">불러오는 중...</div>
-    </div>
-    
-    <div class="hint">
-      0~9, a~f: 청크 토글 (선택/해제) · Enter: 정답 확인 / 다음 문제 · N: 다음 문제
-    </div>
+    <div id="app"><div class="loading">불러오는 중...</div></div>
+    <div class="hint-bar" id="hintbar"></div>
   </div>
 
 <script>
 // ===== 설정 =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwm3Htan4X_r_zVgyGgnuxKhp6OdOKJGwvpOfJLBM3t08R4x1H0o67z57FysVW7BiWN/exec'; // ← 본인 GAS 웹앱 URL
+const GAS_URL = ''; // ← 본인 GAS 웹앱 URL
 const KEY_MAP = '0123456789abcdef';
-const AUTO_GENERATE_COUNT = 5;
 
 // ===== 상태 =====
-let sentences = [];
-let currentIdx = 0;
+let allSentences = [];
+let session = [];          // 이번 세션 출제 목록
+let sIdx = 0;              // 세션 내 인덱스
+let mode = '';             // 'scramble' | 'typing'
 let chunks = [];
 let assembledOrder = [];
+let hintCount = 0;
 let attemptCount = 0;
 let isAnswered = false;
+let sessionResults = [];   // { first_try: bool }
 
 // ===== 초기화 =====
 async function init() {
   try {
     const res = await fetch(`${GAS_URL}?action=getSentences`);
     const data = await res.json();
-    sentences = shuffle(data.sentences);
-    loadSentence(0);
-    
-    // 백그라운드로 새 문장 생성 (await 안 함)
-    generateInBackground();
+    allSentences = data.sentences;
+    renderStart();
+    // 백그라운드 문장 생성
+    fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'generateSentences', count: 5 }) })
+      .catch(err => console.error('생성 실패:', err));
   } catch (err) {
-    document.getElementById('app').innerHTML = 
+    document.getElementById('app').innerHTML =
       `<div class="feedback incorrect">데이터를 불러오지 못했습니다: ${err.message}</div>`;
   }
 }
 
-// ===== 백그라운드 문장 생성 =====
-async function generateInBackground() {
-  try {
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'generateSentences',
-        count: AUTO_GENERATE_COUNT
-      })
-    });
-    console.log('백그라운드 문장 생성 완료');
-  } catch (err) {
-    console.error('문장 생성 실패:', err);
-  }
+// ===== 시작 화면 =====
+let selCount = 5;
+let selTag = 'All';
+
+function renderStart() {
+  document.getElementById('progress').textContent = '';
+  document.getElementById('hintbar').textContent = '';
+  const tags = ['All', ...new Set(allSentences.flatMap(s => String(s.tags).split(',').map(t => t.trim())).filter(Boolean))];
+
+  document.getElementById('app').innerHTML = `
+    <div class="start-panel">
+      <h2>오늘의 세션</h2>
+      <div class="option-group">
+        <span class="option-label">문제 수</span>
+        <div class="option-row">
+          <button class="opt-btn ${selCount===5?'active':''}" onclick="setCount(5)">5</button>
+          <button class="opt-btn ${selCount===10?'active':''}" onclick="setCount(10)">10</button>
+        </div>
+      </div>
+      <div class="option-group">
+        <span class="option-label">태그</span>
+        <select class="opt-select" id="tagSelect" onchange="selTag=this.value">
+          ${tags.map(t => `<option value="${t}" ${t===selTag?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <button class="action" onclick="startSession()">세션 시작</button>
+    </div>
+  `;
 }
 
-// ===== 문장 로드 =====
-function loadSentence(idx) {
-  if (idx >= sentences.length) {
-    document.getElementById('app').innerHTML = 
-      `<div class="feedback correct">모든 문제를 완료했습니다. 새로고침하면 새로 생성된 문장과 함께 다시 시작합니다.</div>`;
+function setCount(n) { selCount = n; renderStart(); }
+
+// ===== 세션 구성 (출제 로직) =====
+function startSession() {
+  let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
+  if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
+
+  // 우선순위: 1) 시도했으나 한 번도 못 맞춘 것 2) 안 본 것 3) 오래 안 본 것
+  const wrong = pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct);
+  const unseen = shuffle(pool.filter(s => s.stats.attempts === 0));
+  const seen = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
+    .sort((a, b) => String(a.stats.last_seen).localeCompare(String(b.stats.last_seen)));
+
+  session = [...shuffle(wrong), ...unseen, ...seen].slice(0, selCount);
+
+  if (session.length === 0) {
+    document.getElementById('app').innerHTML =
+      `<div class="feedback incorrect">해당 조건의 문장이 없습니다.</div>
+       <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
     return;
   }
-  
-  currentIdx = idx;
-  const s = sentences[idx];
-  const shuffled = shuffle([...s.chunks]);
-  
-  if (shuffled.length > KEY_MAP.length) {
-    document.getElementById('app').innerHTML = 
-      `<div class="feedback incorrect">청크가 너무 많습니다 (${shuffled.length}개).</div>`;
-    return;
-  }
-  
-  chunks = shuffled.map((text, i) => ({
-    text,
-    key: KEY_MAP[i],
-    selected: false
-  }));
-  assembledOrder = [];
+
+  sIdx = 0;
+  sessionResults = [];
+  loadQuestion();
+}
+
+// ===== 문제 로드 =====
+function loadQuestion() {
+  if (sIdx >= session.length) { renderSummary(); return; }
+
+  const s = session[sIdx];
+  // 처음 보는 문장 → scramble, 본 적 있으면 → typing
+  mode = s.stats.attempts === 0 ? 'scramble' : 'typing';
+
   attemptCount = 0;
+  hintCount = 0;
   isAnswered = false;
-  
-  document.getElementById('progress').textContent = `${idx + 1} / ${sentences.length}`;
+  assembledOrder = [];
+
+  if (mode === 'scramble') {
+    chunks = shuffle([...s.chunks]).map((text, i) => ({ text, key: KEY_MAP[i], selected: false }));
+  }
+
+  document.getElementById('progress').textContent = `${sIdx + 1} / ${session.length}`;
   render();
 }
 
 // ===== 렌더링 =====
 function render() {
-  const s = sentences[currentIdx];
-  
-  const assembledHTML = assembledOrder.map(i => {
-    const c = chunks[i];
-    return `<button class="chunk in-assembled" onclick="toggleChunk(${i})">
-      <span class="chunk-key">${c.key}</span>${c.text}
-    </button>`;
-  }).join('');
-  
-  const poolHTML = chunks.map((c, i) => {
-    return `<button class="chunk ${c.selected ? 'selected' : ''}" onclick="toggleChunk(${i})">
-      <span class="chunk-key">${c.key}</span>${c.text}
-    </button>`;
-  }).join('');
-  
-  document.getElementById('app').innerHTML = `
-    <div class="korean">${s.korean_text}</div>
-    <div class="assembled" id="assembled">${assembledHTML}</div>
-    <div class="chunks-pool" id="pool">${poolHTML}</div>
-    <div class="controls">
-      <button class="action" onclick="checkAnswer()" ${assembledOrder.length === 0 ? 'disabled' : ''}>
-        정답 확인 (Enter)
-      </button>
-      <button class="action secondary" onclick="nextSentence()">
-        다음 문제 (N)
-      </button>
-    </div>
-    <div id="feedback-area"></div>
-  `;
+  const s = session[sIdx];
+
+  if (mode === 'typing') {
+    document.getElementById('app').innerHTML = `
+      <div class="mode-badge">TYPING</div>
+      <div class="korean">${s.korean_text}</div>
+      <input type="text" class="typing-input" id="typingInput"
+        placeholder="영어로 직접 입력하세요" autocomplete="off" ${isAnswered ? 'disabled' : ''}>
+      <div class="hint-line" id="hintLine"></div>
+      <div class="controls">
+        <button class="action" onclick="checkTyping()">확인 (Enter)</button>
+        <button class="action secondary" onclick="revealHint()">힌트 (Tab)</button>
+        <button class="action secondary" onclick="giveUp()">정답 보기</button>
+        <button class="action secondary" onclick="nextQuestion()">다음 (N)</button>
+      </div>
+      <div id="feedback-area"></div>
+      <div id="pattern-area"></div>
+    `;
+    document.getElementById('hintbar').textContent = 'Tab: 청크 힌트 · Enter: 확인 · N: 다음';
+    const input = document.getElementById('typingInput');
+    input.focus();
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); isAnswered ? nextQuestion() : checkTyping(); }
+      if (e.key === 'Tab') { e.preventDefault(); revealHint(); }
+    });
+    renderHints();
+  } else {
+    const assembledHTML = assembledOrder.map(i => {
+      const c = chunks[i];
+      return `<button class="chunk in-assembled" onclick="toggleChunk(${i})"><span class="chunk-key">${c.key}</span>${c.text}</button>`;
+    }).join('');
+    const poolHTML = chunks.map((c, i) =>
+      `<button class="chunk ${c.selected ? 'selected' : ''}" onclick="toggleChunk(${i})"><span class="chunk-key">${c.key}</span>${c.text}</button>`
+    ).join('');
+
+    document.getElementById('app').innerHTML = `
+      <div class="mode-badge">FIRST LOOK · SCRAMBLE</div>
+      <div class="korean">${s.korean_text}</div>
+      <div class="assembled">${assembledHTML}</div>
+      <div class="chunks-pool">${poolHTML}</div>
+      <div class="controls">
+        <button class="action" onclick="checkScramble()" ${assembledOrder.length === 0 ? 'disabled' : ''}>확인 (Enter)</button>
+        <button class="action secondary" onclick="clearAssembled()">클리어 (Esc)</button>
+        <button class="action secondary" onclick="nextQuestion()">다음 (N)</button>
+      </div>
+      <div id="feedback-area"></div>
+      <div id="pattern-area"></div>
+    `;
+    document.getElementById('hintbar').textContent = '0~9, a~f: 청크 토글 · Esc: 클리어 · Enter: 확인 · N: 다음';
+  }
 }
 
-// ===== 청크 토글 =====
-function toggleChunk(idx) {
+// ===== 타이핑 모드 =====
+function renderHints() {
+  const s = session[sIdx];
+  const el = document.getElementById('hintLine');
+  if (!el) return;
+  el.innerHTML = s.chunks.slice(0, hintCount)
+    .map(c => `<span class="hint-chunk">${c}</span>`).join('') +
+    (hintCount > 0 && hintCount < s.chunks.length ? '<span style="color:#ccc">...</span>' : '');
+}
+
+function revealHint() {
   if (isAnswered) return;
+  const s = session[sIdx];
+  if (hintCount < s.chunks.length) { hintCount++; renderHints(); }
+}
+
+function normalize(t) {
+  return t.toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[.,!?"“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function checkTyping() {
+  if (isAnswered) return;
+  const input = document.getElementById('typingInput');
+  const userText = input.value.trim();
+  if (!userText) return;
+
+  attemptCount++;
+  const s = session[sIdx];
+  const isCorrect = normalize(userText) === normalize(s.english_text);
+  logAttempt(s.id, isCorrect, attemptCount, userText);
+
+  const fb = document.getElementById('feedback-area');
+  if (isCorrect) {
+    finishQuestion(true);
+    fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)
+      <div class="answer">${s.english_text}</div></div>`;
+  } else {
+    // 단어 단위 diff 표시
+    const uw = normalize(userText).split(' ');
+    const cw = normalize(s.english_text).split(' ');
+    const marked = userText.split(/\s+/).map((w, i) =>
+      (uw[i] !== cw[i]) ? `<span class="diff-wrong">${w}</span>` : w
+    ).join(' ');
+
+    fb.innerHTML = `<div class="feedback incorrect">
+      ${marked}
+      <div style="margin-top:8px; color:#999; font-size:13px;">AI 분석 중...</div>
+    </div>`;
+    requestHintAsync(s, userText);
+  }
+}
+
+function giveUp() {
+  if (isAnswered) return;
+  const s = session[sIdx];
+  logAttempt(s.id, false, attemptCount + 1, '(정답 보기)');
+  finishQuestion(false);
+  document.getElementById('feedback-area').innerHTML =
+    `<div class="feedback incorrect">정답 확인
+     <div class="answer">${s.english_text}</div></div>`;
+}
+
+// ===== Scramble 모드 =====
+function toggleChunk(idx) {
+  if (isAnswered || mode !== 'scramble') return;
   const c = chunks[idx];
-  
   if (c.selected) {
     c.selected = false;
     assembledOrder = assembledOrder.filter(i => i !== idx);
@@ -288,68 +460,112 @@ function toggleChunk(idx) {
   render();
 }
 
-// ===== 정답 확인 =====
-async function checkAnswer() {
+function clearAssembled() {
+  if (isAnswered) return;
+  chunks.forEach(c => c.selected = false);
+  assembledOrder = [];
+  render();
+}
+
+function checkScramble() {
   if (assembledOrder.length === 0 || isAnswered) return;
-  
   attemptCount++;
-  const s = sentences[currentIdx];
+  const s = session[sIdx];
   const userText = assembledOrder.map(i => chunks[i].text).join(' ');
   const correctText = s.chunks.join(' ');
   const isCorrect = userText === correctText;
-  
   logAttempt(s.id, isCorrect, attemptCount, userText);
-  
-  const feedbackArea = document.getElementById('feedback-area');
+
+  const fb = document.getElementById('feedback-area');
   if (isCorrect) {
-    isAnswered = true;
-    feedbackArea.innerHTML = `
-      <div class="feedback correct">
-        정답입니다 (${attemptCount}번째 시도)
-        <div class="answer">${s.english_text}</div>
-      </div>
-    `;
+    finishQuestion(true);
+    fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)
+      <div class="answer">${s.english_text}</div></div>`;
   } else {
-    // 로딩 표시
-    feedbackArea.innerHTML = `
-      <div class="feedback incorrect">
-        AI가 분석 중입니다...
-      </div>
-    `;
-    
-    // AI 힌트 요청
-    try {
-      const hintRes = await fetch(GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'analyzeError',
-          korean_text: s.korean_text,
-          correct_answer: correctText,
-          user_input: userText,
-          attempt_number: attemptCount
-        })
-      });
-      const hintData = await hintRes.json();
-      
-      feedbackArea.innerHTML = `
-        <div class="feedback incorrect">
-          ${hintData.hint || '힌트를 가져오지 못했습니다.'}
-        </div>
-      `;
-    } catch (err) {
-      feedbackArea.innerHTML = `
-        <div class="feedback incorrect">다시 시도해보세요 (AI 힌트 오류: ${err.message})</div>
-      `;
-    }
+    fb.innerHTML = `<div class="feedback incorrect">다시 시도해보세요
+      <div style="margin-top:8px; color:#999; font-size:13px;">AI 분석 중...</div></div>`;
+    requestHintAsync(s, userText);
   }
 }
 
-// ===== 다음 문제 =====
-function nextSentence() {
-  loadSentence(currentIdx + 1);
+// ===== 공통 =====
+function finishQuestion(correct) {
+  isAnswered = true;
+  sessionResults.push({ first_try: correct && attemptCount === 1 });
+  fetchPatternNote(session[sIdx].id);
 }
 
-// ===== 로그 전송 =====
+async function requestHintAsync(s, userText) {
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'analyzeError',
+        korean_text: s.korean_text,
+        correct_answer: s.english_text,
+        user_input: userText,
+        attempt_number: attemptCount
+      })
+    });
+    const data = await res.json();
+    const fb = document.getElementById('feedback-area');
+    if (fb && !isAnswered) {
+      const existing = fb.querySelector('.feedback');
+      if (existing) {
+        const loadEl = existing.querySelector('div:last-child');
+        if (loadEl) loadEl.innerHTML = data.hint || '';
+      }
+    }
+  } catch (err) { console.error('힌트 오류:', err); }
+}
+
+async function fetchPatternNote(sentenceId) {
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getPatternNote', sentence_id: sentenceId })
+    });
+    const data = await res.json();
+    const el = document.getElementById('pattern-area');
+    if (el && data.note) el.innerHTML = `<div class="pattern-note">패턴 · ${data.note}</div>`;
+  } catch (err) { console.error('패턴 노트 오류:', err); }
+}
+
+function nextQuestion() {
+  if (!isAnswered) {
+    // 풀지 않고 넘어가면 스킵 기록
+    sessionResults.push({ first_try: false });
+  }
+  sIdx++;
+  loadQuestion();
+}
+
+// ===== 세션 요약 =====
+function renderSummary() {
+  const total = sessionResults.length;
+  const firstTry = sessionResults.filter(r => r.first_try).length;
+  const rate = total > 0 ? Math.round(firstTry / total * 100) : 0;
+
+  // 누적 첫시도 정답률 (이번 세션 이전 데이터 기준)
+  let cumAttempted = 0, cumFirst = 0;
+  allSentences.forEach(s => {
+    if (s.stats.attempts > 0) { cumAttempted++; if (s.stats.first_try_success > 0) cumFirst++; }
+  });
+  const cumRate = cumAttempted > 0 ? Math.round(cumFirst / cumAttempted * 100) : 0;
+
+  document.getElementById('progress').textContent = '';
+  document.getElementById('hintbar').textContent = '';
+  document.getElementById('app').innerHTML = `
+    <div class="summary-panel">
+      <h2>세션 완료</h2>
+      <div class="big-number">${rate}%</div>
+      <div class="sub-metric">이번 세션 첫시도 정답률 (${firstTry}/${total}) · 누적 ${cumRate}%</div>
+      <button class="action" onclick="location.reload()">새 세션 시작</button>
+    </div>
+  `;
+}
+
+// ===== 로그 =====
 async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
   try {
     await fetch(GAS_URL, {
@@ -362,28 +578,28 @@ async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
         user_input: userInput
       })
     });
-  } catch (err) {
-    console.error('로그 전송 실패:', err);
-  }
+  } catch (err) { console.error('로그 실패:', err); }
 }
 
-// ===== 키보드 입력 =====
+// ===== 키보드 (Scramble 전용) =====
 document.addEventListener('keydown', (e) => {
-  if (e.target.matches('input, textarea')) return;
+  if (e.target.matches('input, textarea, select')) return;
   const key = e.key.toLowerCase();
-  
-  if (KEY_MAP.includes(key)) {
-    const idx = KEY_MAP.indexOf(key);
-    if (idx < chunks.length) {
-      e.preventDefault();
-      toggleChunk(idx);
+
+  if (mode === 'scramble') {
+    if (KEY_MAP.includes(key)) {
+      const idx = KEY_MAP.indexOf(key);
+      if (idx < chunks.length) { e.preventDefault(); toggleChunk(idx); }
+      return;
     }
-  } else if (e.key === 'Enter') {
+    if (e.key === 'Escape') { clearAssembled(); return; }
+  }
+  if (e.key === 'Enter') {
     e.preventDefault();
-    if (isAnswered) nextSentence();
-    else checkAnswer();
+    if (isAnswered) nextQuestion();
+    else if (mode === 'scramble') checkScramble();
   } else if (key === 'n' && isAnswered) {
-    nextSentence();
+    nextQuestion();
   }
 });
 
@@ -397,7 +613,6 @@ function shuffle(arr) {
   return a;
 }
 
-// ===== 시작 =====
 init();
 </script>
 </body>
