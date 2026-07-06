@@ -29,7 +29,6 @@
   .title { font-size: 13px; font-weight: 600; color: #666; letter-spacing: 1px; }
   .progress { font-size: 13px; color: #888; }
 
-  /* ===== 시작 화면 ===== */
   .start-panel {
     background: #fff;
     border: 1px solid #e5e5e5;
@@ -59,7 +58,6 @@
     background: #fff;
   }
 
-  /* ===== 문제 화면 ===== */
   .mode-badge {
     display: inline-block;
     font-size: 11px;
@@ -163,6 +161,51 @@
   button.action.secondary:hover { background: #f5f5f5; }
   button.action:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* 채점 결과 */
+  .grade {
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    border: 1px solid #e5e5e5;
+  }
+  .grade-head {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .grade.pass .grade-head { background: #f0f7f0; color: #2a5a2a; }
+  .grade.partial .grade-head { background: #fdf6ec; color: #8a5a1a; }
+  .grade.retry .grade-head { background: #faf0f0; color: #7a2a2a; }
+  .verdict-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.06);
+  }
+  .grade-body { padding: 14px 16px; background: #fff; }
+  .grade-row { margin-bottom: 12px; }
+  .grade-row:last-child { margin-bottom: 0; }
+  .grade-row .label {
+    font-size: 11px;
+    color: #999;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .grade-row .text { font-size: 15px; color: #1a1a1a; }
+  .grade-row.minor .text { color: #8a5a1a; }
+  .grade-row.native .text { color: #1a5a3a; font-weight: 500; }
+  .grade-comment {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 13px;
+    color: #777;
+  }
+
   .feedback {
     padding: 14px 18px;
     border-radius: 6px;
@@ -172,7 +215,6 @@
   .feedback.correct { background: #f0f7f0; border: 1px solid #c8e0c8; color: #2a5a2a; }
   .feedback.incorrect { background: #faf0f0; border: 1px solid #e0c8c8; color: #7a2a2a; }
   .feedback .answer { margin-top: 6px; font-weight: 500; color: #1a1a1a; font-size: 15px; }
-  .feedback .diff-wrong { color: #c0392b; text-decoration: underline; font-weight: 600; }
 
   .pattern-note {
     padding: 12px 18px;
@@ -184,7 +226,6 @@
     color: #55552a;
   }
 
-  /* ===== 요약 화면 ===== */
   .summary-panel {
     background: #fff;
     border: 1px solid #e5e5e5;
@@ -196,13 +237,9 @@
   .big-number { font-size: 42px; font-weight: 700; margin-bottom: 6px; }
   .sub-metric { font-size: 13px; color: #888; margin-bottom: 28px; }
 
-  .hint-bar {
-    font-size: 12px;
-    color: #999;
-    text-align: center;
-    margin-top: 16px;
-  }
+  .hint-bar { font-size: 12px; color: #999; text-align: center; margin-top: 16px; }
   .loading { text-align: center; padding: 40px; color: #888; }
+  .spinner-text { color: #999; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -222,15 +259,17 @@ const KEY_MAP = '0123456789abcdef';
 
 // ===== 상태 =====
 let allSentences = [];
-let session = [];          // 이번 세션 출제 목록
-let sIdx = 0;              // 세션 내 인덱스
-let mode = '';             // 'scramble' | 'typing'
+let session = [];
+let sIdx = 0;
+let mode = '';
 let chunks = [];
 let assembledOrder = [];
 let hintCount = 0;
 let attemptCount = 0;
 let isAnswered = false;
-let sessionResults = [];   // { first_try: bool }
+let sessionResults = [];    // { counted: bool, first_pass: bool }
+let selCount = 5;
+let selTag = 'All';
 
 // ===== 초기화 =====
 async function init() {
@@ -239,7 +278,6 @@ async function init() {
     const data = await res.json();
     allSentences = data.sentences;
     renderStart();
-    // 백그라운드 문장 생성
     fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'generateSentences', count: 5 }) })
       .catch(err => console.error('생성 실패:', err));
   } catch (err) {
@@ -249,9 +287,6 @@ async function init() {
 }
 
 // ===== 시작 화면 =====
-let selCount = 5;
-let selTag = 'All';
-
 function renderStart() {
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
@@ -280,12 +315,11 @@ function renderStart() {
 
 function setCount(n) { selCount = n; renderStart(); }
 
-// ===== 세션 구성 (출제 로직) =====
+// ===== 세션 구성 =====
 function startSession() {
   let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
 
-  // 우선순위: 1) 시도했으나 한 번도 못 맞춘 것 2) 안 본 것 3) 오래 안 본 것
   const wrong = pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct);
   const unseen = shuffle(pool.filter(s => s.stats.attempts === 0));
   const seen = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
@@ -310,11 +344,10 @@ function loadQuestion() {
   if (sIdx >= session.length) { renderSummary(); return; }
 
   const s = session[sIdx];
-  // 처음 보는 문장 → scramble, 본 적 있으면 → typing
   mode = s.stats.attempts === 0 ? 'scramble' : 'typing';
 
   attemptCount = 0;
-  hintCount = 0;
+  hintCount = getInitialHints(s);
   isAnswered = false;
   assembledOrder = [];
 
@@ -326,27 +359,35 @@ function loadQuestion() {
   render();
 }
 
+// ===== 숙련도 기반 기본 힌트 개수 =====
+function getInitialHints(s) {
+  if (mode !== 'typing') return 0;
+  const success = s.stats.first_try_success || 0;
+  if (success === 0) return 2;
+  if (success === 1) return 1;
+  return 0;
+}
+
 // ===== 렌더링 =====
 function render() {
   const s = session[sIdx];
 
   if (mode === 'typing') {
     document.getElementById('app').innerHTML = `
-      <div class="mode-badge">TYPING</div>
+      <div class="mode-badge">TYPING · 자유 영작</div>
       <div class="korean">${s.korean_text}</div>
       <input type="text" class="typing-input" id="typingInput"
-        placeholder="영어로 직접 입력하세요" autocomplete="off" ${isAnswered ? 'disabled' : ''}>
+        placeholder="영어로 자유롭게 작문하세요" autocomplete="off" ${isAnswered ? 'disabled' : ''}>
       <div class="hint-line" id="hintLine"></div>
       <div class="controls">
-        <button class="action" onclick="checkTyping()">확인 (Enter)</button>
+        <button class="action" onclick="checkTyping()" id="submitBtn">채점 (Enter)</button>
         <button class="action secondary" onclick="revealHint()">힌트 (Tab)</button>
-        <button class="action secondary" onclick="giveUp()">정답 보기</button>
         <button class="action secondary" onclick="nextQuestion()">다음 (N)</button>
       </div>
       <div id="feedback-area"></div>
       <div id="pattern-area"></div>
     `;
-    document.getElementById('hintbar').textContent = 'Tab: 청크 힌트 · Enter: 확인 · N: 다음';
+    document.getElementById('hintbar').textContent = 'Tab: 청크 힌트 · Enter: 채점 · N: 다음';
     const input = document.getElementById('typingInput');
     input.focus();
     input.addEventListener('keydown', (e) => {
@@ -380,14 +421,18 @@ function render() {
   }
 }
 
-// ===== 타이핑 모드 =====
+// ===== 타이핑 힌트 =====
 function renderHints() {
   const s = session[sIdx];
   const el = document.getElementById('hintLine');
   if (!el) return;
-  el.innerHTML = s.chunks.slice(0, hintCount)
-    .map(c => `<span class="hint-chunk">${c}</span>`).join('') +
-    (hintCount > 0 && hintCount < s.chunks.length ? '<span style="color:#ccc">...</span>' : '');
+
+  const shown = s.chunks.slice(0, hintCount)
+    .map(c => `<span class="hint-chunk">${c}</span>`).join('');
+  const more = hintCount < s.chunks.length
+    ? `<span style="color:#bbb; font-size:12px;">Tab: 힌트 더 보기 (${hintCount}/${s.chunks.length})</span>`
+    : `<span style="color:#bbb; font-size:12px;">전체 힌트 표시됨</span>`;
+  el.innerHTML = shown + (shown ? ' ' : '') + more;
 }
 
 function revealHint() {
@@ -396,15 +441,8 @@ function revealHint() {
   if (hintCount < s.chunks.length) { hintCount++; renderHints(); }
 }
 
-function normalize(t) {
-  return t.toLowerCase()
-    .replace(/[’]/g, "'")
-    .replace(/[.,!?"“”]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function checkTyping() {
+// ===== 타이핑 LLM 채점 =====
+async function checkTyping() {
   if (isAnswered) return;
   const input = document.getElementById('typingInput');
   const userText = input.value.trim();
@@ -412,41 +450,78 @@ function checkTyping() {
 
   attemptCount++;
   const s = session[sIdx];
-  const isCorrect = normalize(userText) === normalize(s.english_text);
-  logAttempt(s.id, isCorrect, attemptCount, userText);
+  const allHintsOpen = hintCount >= s.chunks.length;
 
+  // 채점 중 UI
   const fb = document.getElementById('feedback-area');
-  if (isCorrect) {
-    finishQuestion(true);
-    fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)
-      <div class="answer">${s.english_text}</div></div>`;
-  } else {
-    // 단어 단위 diff 표시
-    const uw = normalize(userText).split(' ');
-    const cw = normalize(s.english_text).split(' ');
-    const marked = userText.split(/\s+/).map((w, i) =>
-      (uw[i] !== cw[i]) ? `<span class="diff-wrong">${w}</span>` : w
-    ).join(' ');
+  document.getElementById('submitBtn').disabled = true;
+  fb.innerHTML = `<div class="spinner-text">AI가 채점 중입니다...</div>`;
 
-    fb.innerHTML = `<div class="feedback incorrect">
-      ${marked}
-      <div style="margin-top:8px; color:#999; font-size:13px;">AI 분석 중...</div>
-    </div>`;
-    requestHintAsync(s, userText);
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'gradeTyping',
+        korean_text: s.korean_text,
+        reference_answer: s.english_text,
+        user_input: userText
+      })
+    });
+    const g = await res.json();
+    const verdict = g.verdict || 'partial';
+    const isPass = verdict === 'pass';
+
+    // 로그: pass면 정답으로 기록
+    logAttempt(s.id, isPass, attemptCount, userText);
+
+    // 지표 집계: 첫 제출이고 힌트를 다 열지 않은 경우에만 카운트
+    if (attemptCount === 1 && !allHintsOpen) {
+      sessionResults.push({ counted: true, first_pass: isPass });
+    } else if (attemptCount === 1 && allHintsOpen) {
+      sessionResults.push({ counted: false, first_pass: false });
+    }
+
+    renderGrade(g, s);
+
+    if (isPass) {
+      isAnswered = true;
+      document.getElementById('typingInput').disabled = true;
+      fetchPatternNote(s.id);
+    } else {
+      // 재시도 가능: 버튼 복구, 입력 유지
+      document.getElementById('submitBtn').disabled = false;
+    }
+  } catch (err) {
+    fb.innerHTML = `<div class="feedback incorrect">채점 오류: ${err.message}</div>`;
+    document.getElementById('submitBtn').disabled = false;
   }
 }
 
-function giveUp() {
-  if (isAnswered) return;
-  const s = session[sIdx];
-  logAttempt(s.id, false, attemptCount + 1, '(정답 보기)');
-  finishQuestion(false);
-  document.getElementById('feedback-area').innerHTML =
-    `<div class="feedback incorrect">정답 확인
-     <div class="answer">${s.english_text}</div></div>`;
+function renderGrade(g, s) {
+  const verdict = g.verdict || 'partial';
+  const labelMap = { pass: '통과', partial: '부분 통과', retry: '다시 시도' };
+  const fb = document.getElementById('feedback-area');
+
+  // pass가 아니면 모범답은 감춰서 재시도 유도, minor/native는 힌트로 제공
+  const showReference = verdict === 'pass';
+
+  fb.innerHTML = `
+    <div class="grade ${verdict}">
+      <div class="grade-head">
+        <span class="verdict-tag">${labelMap[verdict]}</span>
+        ${verdict === 'retry' ? '의미를 다시 확인해보세요' : ''}
+      </div>
+      <div class="grade-body">
+        ${g.minor ? `<div class="grade-row minor"><div class="label">소극적 수정 · 문법만</div><div class="text">${g.minor}</div></div>` : ''}
+        ${(verdict !== 'retry' && g.native) ? `<div class="grade-row native"><div class="label">적극적 수정 · 네이티브 AL</div><div class="text">${g.native}</div></div>` : ''}
+        ${showReference ? `<div class="grade-row"><div class="label">참고 · 원래 의도</div><div class="text">${s.english_text}</div></div>` : ''}
+        ${g.comment ? `<div class="grade-comment">${g.comment}</div>` : ''}
+      </div>
+    </div>
+  `;
 }
 
-// ===== Scramble 모드 =====
+// ===== Scramble =====
 function toggleChunk(idx) {
   if (isAnswered || mode !== 'scramble') return;
   const c = chunks[idx];
@@ -478,24 +553,20 @@ function checkScramble() {
 
   const fb = document.getElementById('feedback-area');
   if (isCorrect) {
-    finishQuestion(true);
+    isAnswered = true;
+    if (attemptCount === 1) sessionResults.push({ counted: true, first_pass: true });
+    else if (sessionResults.length < sIdx + 1) sessionResults.push({ counted: true, first_pass: false });
     fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)
       <div class="answer">${s.english_text}</div></div>`;
+    fetchPatternNote(s.id);
   } else {
     fb.innerHTML = `<div class="feedback incorrect">다시 시도해보세요
-      <div style="margin-top:8px; color:#999; font-size:13px;">AI 분석 중...</div></div>`;
-    requestHintAsync(s, userText);
+      <div class="spinner-text" style="margin-top:8px;">AI 분석 중...</div></div>`;
+    requestScrambleHint(s, userText);
   }
 }
 
-// ===== 공통 =====
-function finishQuestion(correct) {
-  isAnswered = true;
-  sessionResults.push({ first_try: correct && attemptCount === 1 });
-  fetchPatternNote(session[sIdx].id);
-}
-
-async function requestHintAsync(s, userText) {
+async function requestScrambleHint(s, userText) {
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
@@ -510,15 +581,12 @@ async function requestHintAsync(s, userText) {
     const data = await res.json();
     const fb = document.getElementById('feedback-area');
     if (fb && !isAnswered) {
-      const existing = fb.querySelector('.feedback');
-      if (existing) {
-        const loadEl = existing.querySelector('div:last-child');
-        if (loadEl) loadEl.innerHTML = data.hint || '';
-      }
+      fb.innerHTML = `<div class="feedback incorrect">${data.hint || '다시 시도해보세요'}</div>`;
     }
   } catch (err) { console.error('힌트 오류:', err); }
 }
 
+// ===== 패턴 노트 =====
 async function fetchPatternNote(sentenceId) {
   try {
     const res = await fetch(GAS_URL, {
@@ -531,22 +599,23 @@ async function fetchPatternNote(sentenceId) {
   } catch (err) { console.error('패턴 노트 오류:', err); }
 }
 
+// ===== 다음 =====
 function nextQuestion() {
-  if (!isAnswered) {
-    // 풀지 않고 넘어가면 스킵 기록
-    sessionResults.push({ first_try: false });
+  if (!isAnswered && mode === 'typing' && sessionResults.length < sIdx + 1) {
+    sessionResults.push({ counted: false, first_pass: false });
+  } else if (!isAnswered && mode === 'scramble' && sessionResults.length < sIdx + 1) {
+    sessionResults.push({ counted: false, first_pass: false });
   }
   sIdx++;
   loadQuestion();
 }
 
-// ===== 세션 요약 =====
+// ===== 요약 =====
 function renderSummary() {
-  const total = sessionResults.length;
-  const firstTry = sessionResults.filter(r => r.first_try).length;
-  const rate = total > 0 ? Math.round(firstTry / total * 100) : 0;
+  const counted = sessionResults.filter(r => r.counted);
+  const passed = counted.filter(r => r.first_pass).length;
+  const rate = counted.length > 0 ? Math.round(passed / counted.length * 100) : 0;
 
-  // 누적 첫시도 정답률 (이번 세션 이전 데이터 기준)
   let cumAttempted = 0, cumFirst = 0;
   allSentences.forEach(s => {
     if (s.stats.attempts > 0) { cumAttempted++; if (s.stats.first_try_success > 0) cumFirst++; }
@@ -559,7 +628,7 @@ function renderSummary() {
     <div class="summary-panel">
       <h2>세션 완료</h2>
       <div class="big-number">${rate}%</div>
-      <div class="sub-metric">이번 세션 첫시도 정답률 (${firstTry}/${total}) · 누적 ${cumRate}%</div>
+      <div class="sub-metric">이번 세션 첫시도 통과율 (${passed}/${counted.length}, 힌트 전체 사용 제외) · 누적 ${cumRate}%</div>
       <button class="action" onclick="location.reload()">새 세션 시작</button>
     </div>
   `;
