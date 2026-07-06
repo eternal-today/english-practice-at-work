@@ -161,7 +161,6 @@
   button.action.secondary:hover { background: #f5f5f5; }
   button.action:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* 채점 결과 */
   .grade {
     border-radius: 6px;
     margin-bottom: 12px;
@@ -267,7 +266,7 @@ let assembledOrder = [];
 let hintCount = 0;
 let attemptCount = 0;
 let isAnswered = false;
-let sessionResults = [];    // { counted: bool, first_pass: bool }
+let sessionResults = [];
 let selCount = 5;
 let selTag = 'All';
 
@@ -441,6 +440,25 @@ function revealHint() {
   if (hintCount < s.chunks.length) { hintCount++; renderHints(); }
 }
 
+// ===== 정규화 & diff =====
+function normalizeForCompare(t) {
+  return t.toLowerCase().replace(/[’]/g, "'").replace(/[.,!?"“”]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function renderMinorText(userInput, minor) {
+  if (normalizeForCompare(userInput) === normalizeForCompare(minor)) {
+    return { same: true, html: '' };
+  }
+  const uw = userInput.split(/\s+/);
+  const mw = minor.split(/\s+/);
+  const marked = mw.map((w, i) =>
+    (normalizeForCompare(uw[i] || '') !== normalizeForCompare(w))
+      ? `<span style="color:#c0392b; font-weight:600; text-decoration:underline;">${w}</span>`
+      : w
+  ).join(' ');
+  return { same: false, html: marked };
+}
+
 // ===== 타이핑 LLM 채점 =====
 async function checkTyping() {
   if (isAnswered) return;
@@ -452,7 +470,6 @@ async function checkTyping() {
   const s = session[sIdx];
   const allHintsOpen = hintCount >= s.chunks.length;
 
-  // 채점 중 UI
   const fb = document.getElementById('feedback-area');
   document.getElementById('submitBtn').disabled = true;
   fb.innerHTML = `<div class="spinner-text">AI가 채점 중입니다...</div>`;
@@ -471,24 +488,21 @@ async function checkTyping() {
     const verdict = g.verdict || 'partial';
     const isPass = verdict === 'pass';
 
-    // 로그: pass면 정답으로 기록
     logAttempt(s.id, isPass, attemptCount, userText);
 
-    // 지표 집계: 첫 제출이고 힌트를 다 열지 않은 경우에만 카운트
     if (attemptCount === 1 && !allHintsOpen) {
       sessionResults.push({ counted: true, first_pass: isPass });
     } else if (attemptCount === 1 && allHintsOpen) {
       sessionResults.push({ counted: false, first_pass: false });
     }
 
-    renderGrade(g, s);
+    renderGrade(g, s, userText);
 
     if (isPass) {
       isAnswered = true;
       document.getElementById('typingInput').disabled = true;
       fetchPatternNote(s.id);
     } else {
-      // 재시도 가능: 버튼 복구, 입력 유지
       document.getElementById('submitBtn').disabled = false;
     }
   } catch (err) {
@@ -497,34 +511,12 @@ async function checkTyping() {
   }
 }
 
-// ===== 정규화 & diff =====
-function normalizeForCompare(t) {
-  return t.toLowerCase().replace(/[’]/g, "'").replace(/[.,!?"“”]/g, '').replace(/\s+/g, ' ').trim();
-}
-
-function renderMinorText(userInput, minor) {
-  // 내 문장과 소극적 수정이 사실상 같은지 판단
-  if (normalizeForCompare(userInput) === normalizeForCompare(minor)) {
-    return { same: true, html: '' };
-  }
-  // 단어 단위로 바뀐 부분만 강조
-  const uw = userInput.split(/\s+/);
-  const mw = minor.split(/\s+/);
-  const marked = mw.map((w, i) =>
-    (normalizeForCompare(uw[i] || '') !== normalizeForCompare(w))
-      ? `<span style="color:#c0392b; font-weight:600; text-decoration:underline;">${w}</span>`
-      : w
-  ).join(' ');
-  return { same: false, html: marked };
-}
- 
-function renderGrade(g, s) {
+function renderGrade(g, s, userText) {
   const verdict = g.verdict || 'partial';
   const labelMap = { pass: '통과', partial: '부분 통과', retry: '다시 시도' };
   const fb = document.getElementById('feedback-area');
 
-  const userInput = document.getElementById('typingInput').value.trim();
-  const minorResult = g.minor ? renderMinorText(userInput, g.minor) : null;
+  const minorResult = g.minor ? renderMinorText(userText, g.minor) : null;
 
   let minorRow = '';
   if (minorResult) {
@@ -632,9 +624,7 @@ async function fetchPatternNote(sentenceId) {
 
 // ===== 다음 =====
 function nextQuestion() {
-  if (!isAnswered && mode === 'typing' && sessionResults.length < sIdx + 1) {
-    sessionResults.push({ counted: false, first_pass: false });
-  } else if (!isAnswered && mode === 'scramble' && sessionResults.length < sIdx + 1) {
+  if (!isAnswered && sessionResults.length < sIdx + 1) {
     sessionResults.push({ counted: false, first_pass: false });
   }
   sIdx++;
