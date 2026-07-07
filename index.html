@@ -6,137 +6,66 @@
 <title>Stealth AL</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
-    background: #fafafa;
-    color: #1a1a1a;
-    min-height: 100vh;
-    padding: 40px 20px;
-    line-height: 1.6;
+    background: #fafafa; color: #1a1a1a; min-height: 100vh; padding: 40px 20px; line-height: 1.6;
   }
-
   .container { max-width: 720px; margin: 0 auto; }
-
   .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 28px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid #e5e5e5;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px; padding-bottom: 14px; border-bottom: 1px solid #e5e5e5;
   }
-  .title { font-size: 13px; font-weight: 600; color: #666; letter-spacing: 1px; }
+  .title { font-size: 13px; font-weight: 600; color: #666; letter-spacing: 1px; cursor: pointer; }
   .progress { font-size: 13px; color: #888; }
 
-  .start-panel {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    padding: 32px;
-  }
+  .start-panel { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 32px; }
   .start-panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 24px; color: #333; }
   .option-group { margin-bottom: 20px; }
   .option-label { font-size: 12px; color: #999; margin-bottom: 8px; display: block; }
   .option-row { display: flex; gap: 8px; }
   .opt-btn {
-    padding: 8px 18px;
-    background: #fff;
-    border: 1px solid #d4d4d4;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    font-family: inherit;
+    padding: 8px 18px; background: #fff; border: 1px solid #d4d4d4; border-radius: 4px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
   }
   .opt-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
   select.opt-select {
-    padding: 8px 12px;
-    border: 1px solid #d4d4d4;
-    border-radius: 4px;
-    font-size: 14px;
-    font-family: inherit;
-    background: #fff;
+    padding: 8px 12px; border: 1px solid #d4d4d4; border-radius: 4px;
+    font-size: 14px; font-family: inherit; background: #fff;
   }
+  .nav-row { display: flex; gap: 8px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee; }
 
   .mode-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: #888;
-    background: #f0f0f0;
-    padding: 3px 10px;
-    border-radius: 3px;
-    margin-bottom: 12px;
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    color: #888; background: #f0f0f0; padding: 3px 10px; border-radius: 3px; margin-bottom: 12px;
   }
   .korean {
-    font-size: 18px;
-    font-weight: 500;
-    padding: 22px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
-    margin-bottom: 20px;
+    font-size: 18px; font-weight: 500; padding: 22px; background: #fff;
+    border: 1px solid #e5e5e5; border-radius: 6px; margin-bottom: 20px;
   }
-
   .typing-input {
-    width: 100%;
-    padding: 14px 16px;
-    font-size: 16px;
-    font-family: inherit;
-    border: 1px solid #d4d4d4;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    outline: none;
+    width: 100%; padding: 14px 16px; font-size: 16px; font-family: inherit;
+    border: 1px solid #d4d4d4; border-radius: 6px; margin-bottom: 12px; outline: none;
   }
   .typing-input:focus { border-color: #1a1a1a; }
 
-  .hint-line {
-    font-size: 13px;
-    color: #999;
-    margin-bottom: 16px;
-    min-height: 20px;
-  }
+  .hint-line { font-size: 13px; color: #999; margin-bottom: 16px; min-height: 20px; }
   .hint-line .hint-chunk {
-    display: inline-block;
-    background: #f0f0f0;
-    padding: 2px 8px;
-    border-radius: 3px;
-    margin-right: 6px;
-    color: #555;
+    display: inline-block; background: #f0f0f0; padding: 2px 8px; border-radius: 3px;
+    margin-right: 6px; color: #555;
   }
 
   .assembled {
-    min-height: 70px;
-    padding: 14px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
-    margin-bottom: 16px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-content: flex-start;
+    min-height: 70px; padding: 14px; background: #fff; border: 1px solid #e5e5e5;
+    border-radius: 6px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start;
   }
   .assembled:empty::before { content: '여기에 청크가 조립됩니다'; color: #bbb; font-size: 13px; }
-
   .chunks-pool {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 16px;
-    padding: 14px;
-    background: #f5f5f5;
-    border-radius: 6px;
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 14px;
+    background: #f5f5f5; border-radius: 6px;
   }
   .chunk {
-    padding: 9px 14px;
-    background: #fff;
-    border: 1px solid #d4d4d4;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    font-family: inherit;
+    padding: 9px 14px; background: #fff; border: 1px solid #d4d4d4; border-radius: 4px;
+    font-size: 14px; cursor: pointer; font-family: inherit;
   }
   .chunk:hover { border-color: #555; }
   .chunk.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
@@ -147,104 +76,86 @@
   .chunk.selected .chunk-key { color: #aaa; }
 
   .answer-strip {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    padding: 12px 14px; background: #f0f7f0;
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; background: #f0f7f0;
     border: 1px solid #c8e0c8; border-radius: 6px;
   }
   .answer-strip .chunk-mini {
-    padding: 6px 12px; background: #fff; border: 1px solid #c8e0c8;
-    border-radius: 4px; font-size: 13px; color: #2a5a2a;
+    padding: 6px 12px; background: #fff; border: 1px solid #c8e0c8; border-radius: 4px;
+    font-size: 13px; color: #2a5a2a;
   }
   .strip-label { font-size: 11px; color: #6a8a6a; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
 
   .controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   button.action {
-    padding: 10px 18px;
-    font-size: 14px;
-    font-weight: 500;
-    background: #1a1a1a;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: inherit;
+    padding: 10px 18px; font-size: 14px; font-weight: 500; background: #1a1a1a;
+    color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: inherit;
   }
   button.action:hover { background: #333; }
   button.action.secondary { background: #fff; color: #1a1a1a; border: 1px solid #d4d4d4; }
   button.action.secondary:hover { background: #f5f5f5; }
   button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.mini {
+    padding: 5px 12px; font-size: 12px; background: #fff; color: #444;
+    border: 1px solid #d4d4d4; border-radius: 4px; cursor: pointer; font-family: inherit;
+  }
+  button.mini:hover { border-color: #888; }
 
-  .grade {
-    border-radius: 6px;
-    margin-bottom: 12px;
-    overflow: hidden;
-    border: 1px solid #e5e5e5;
-  }
-  .grade-head {
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .grade { border-radius: 6px; margin-bottom: 12px; overflow: hidden; border: 1px solid #e5e5e5; }
+  .grade-head { padding: 10px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .grade.pass .grade-head { background: #f0f7f0; color: #2a5a2a; }
   .grade.partial .grade-head { background: #fdf6ec; color: #8a5a1a; }
   .grade.retry .grade-head { background: #faf0f0; color: #7a2a2a; }
-  .verdict-tag {
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 3px;
-    background: rgba(0,0,0,0.06);
-  }
+  .verdict-tag { font-size: 11px; padding: 2px 8px; border-radius: 3px; background: rgba(0,0,0,0.06); }
   .grade-body { padding: 14px 16px; background: #fff; }
   .grade-row { margin-bottom: 12px; }
   .grade-row:last-child { margin-bottom: 0; }
-  .grade-row .label {
-    font-size: 11px;
-    color: #999;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    margin-bottom: 3px;
-  }
+  .grade-row .label { font-size: 11px; color: #999; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 3px; }
   .grade-row .text { font-size: 15px; color: #1a1a1a; }
   .grade-row.minor .text { color: #8a5a1a; }
   .grade-row.native .text { color: #1a5a3a; font-weight: 500; }
-  .grade-comment {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #f0f0f0;
-    font-size: 13px;
-    color: #777;
-  }
+  .grade-comment { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; font-size: 13px; color: #777; }
 
-  .feedback {
-    padding: 14px 18px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    font-size: 14px;
-  }
+  .feedback { padding: 14px 18px; border-radius: 6px; margin-bottom: 12px; font-size: 14px; }
   .feedback.correct { background: #f0f7f0; border: 1px solid #c8e0c8; color: #2a5a2a; }
   .feedback.incorrect { background: #faf0f0; border: 1px solid #e0c8c8; color: #7a2a2a; }
   .feedback .answer { margin-top: 6px; font-weight: 500; color: #1a1a1a; font-size: 15px; }
 
   .pattern-note {
-    padding: 12px 18px;
-    background: #f7f7f2;
-    border: 1px solid #e0e0d0;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    font-size: 13px;
-    color: #55552a;
+    padding: 12px 18px; background: #f7f7f2; border: 1px solid #e0e0d0; border-radius: 6px;
+    margin-bottom: 12px; font-size: 13px; color: #55552a;
   }
 
-  .summary-panel {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    padding: 32px;
-    text-align: center;
+  /* 수집 UI */
+  .collect-box {
+    margin-top: 8px; padding: 14px 16px; background: #f7f9fb; border: 1px solid #d8e2ea;
+    border-radius: 6px; margin-bottom: 12px;
   }
+  .collect-box .cb-label { font-size: 11px; color: #6a8090; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .collect-box input {
+    width: 100%; padding: 9px 12px; font-size: 14px; font-family: inherit;
+    border: 1px solid #cdd8e0; border-radius: 4px; margin-bottom: 8px; outline: none;
+  }
+  .collect-box input:focus { border-color: #6a8090; }
+  .collect-box .cb-row { display: flex; gap: 8px; align-items: center; }
+  .type-select { padding: 8px 10px; border: 1px solid #cdd8e0; border-radius: 4px; font-size: 13px; font-family: inherit; background: #fff; }
+  .collect-done { font-size: 13px; color: #2a5a2a; padding: 8px 0; }
+
+  /* 수집함 */
+  .coll-item {
+    padding: 14px 16px; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; margin-bottom: 10px;
+  }
+  .coll-term { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+  .coll-type { font-size: 10px; color: #999; background: #f0f0f0; padding: 2px 7px; border-radius: 3px; margin-left: 8px; }
+  .coll-meaning { font-size: 14px; color: #444; margin-top: 5px; }
+  .coll-ai { font-size: 12px; color: #999; margin-top: 3px; }
+  .coll-usage { font-size: 12px; color: #7a7a5a; margin-top: 5px; font-style: italic; }
+
+  /* 퀴즈 */
+  .quiz-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 28px; text-align: center; }
+  .quiz-q { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+  .quiz-sub { font-size: 12px; color: #999; margin-bottom: 20px; }
+
+  .summary-panel { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 32px; text-align: center; }
   .summary-panel h2 { font-size: 15px; font-weight: 600; color: #666; margin-bottom: 24px; }
   .big-number { font-size: 42px; font-weight: 700; margin-bottom: 6px; }
   .sub-metric { font-size: 13px; color: #888; margin-bottom: 28px; }
@@ -252,12 +163,13 @@
   .hint-bar { font-size: 12px; color: #999; text-align: center; margin-top: 16px; }
   .loading { text-align: center; padding: 40px; color: #888; }
   .spinner-text { color: #999; font-size: 13px; }
+  .empty-note { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
 </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">STEALTH AL</div>
+      <div class="title" onclick="goHome()">STEALTH AL</div>
       <div class="progress" id="progress"></div>
     </div>
     <div id="app"><div class="loading">불러오는 중...</div></div>
@@ -271,17 +183,14 @@ const KEY_MAP = '0123456789abcdef';
 
 // ===== 상태 =====
 let allSentences = [];
-let session = [];
-let sIdx = 0;
-let mode = '';
-let chunks = [];
-let assembledOrder = [];
-let hintCount = 0;
-let attemptCount = 0;
-let isAnswered = false;
+let session = [], sIdx = 0, mode = '';
+let chunks = [], assembledOrder = [];
+let hintCount = 0, attemptCount = 0, isAnswered = false;
 let sessionResults = [];
-let selCount = 5;
-let selTag = 'All';
+let selCount = 5, selTag = 'All';
+
+// 퀴즈 상태
+let quizItems = [], qIdx = 0, quizScore = 0;
 
 // ===== 초기화 =====
 async function init() {
@@ -297,6 +206,8 @@ async function init() {
       `<div class="feedback incorrect">데이터를 불러오지 못했습니다: ${err.message}</div>`;
   }
 }
+
+function goHome() { renderStart(); }
 
 // ===== 시작 화면 =====
 function renderStart() {
@@ -321,22 +232,23 @@ function renderStart() {
         </select>
       </div>
       <button class="action" onclick="startSession()">세션 시작</button>
+      <div class="nav-row">
+        <button class="action secondary" onclick="openCollection()">수집함 보기</button>
+        <button class="action secondary" onclick="startQuiz()">수집 퀴즈</button>
+      </div>
     </div>
   `;
 }
-
 function setCount(n) { selCount = n; renderStart(); }
 
 // ===== 세션 구성 =====
 function startSession() {
   let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
-
   const wrong = pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct);
   const unseen = shuffle(pool.filter(s => s.stats.attempts === 0));
   const seen = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
     .sort((a, b) => String(a.stats.last_seen).localeCompare(String(b.stats.last_seen)));
-
   session = [...shuffle(wrong), ...unseen, ...seen].slice(0, selCount);
 
   if (session.length === 0) {
@@ -345,33 +257,22 @@ function startSession() {
        <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
     return;
   }
-
-  sIdx = 0;
-  sessionResults = [];
+  sIdx = 0; sessionResults = [];
   loadQuestion();
 }
 
-// ===== 문제 로드 =====
 function loadQuestion() {
   if (sIdx >= session.length) { renderSummary(); return; }
-
   const s = session[sIdx];
   mode = s.stats.attempts === 0 ? 'scramble' : 'typing';
-
-  attemptCount = 0;
-  hintCount = getInitialHints(s);
-  isAnswered = false;
-  assembledOrder = [];
-
+  attemptCount = 0; hintCount = getInitialHints(s); isAnswered = false; assembledOrder = [];
   if (mode === 'scramble') {
     chunks = shuffle([...s.chunks]).map((text, i) => ({ text, key: KEY_MAP[i], selected: false }));
   }
-
   document.getElementById('progress').textContent = `${sIdx + 1} / ${session.length}`;
   render();
 }
 
-// ===== 숙련도 기반 기본 힌트 개수 =====
 function getInitialHints(s) {
   if (mode !== 'typing') return 0;
   const success = s.stats.first_try_success || 0;
@@ -383,13 +284,11 @@ function getInitialHints(s) {
 // ===== 렌더링 =====
 function render() {
   const s = session[sIdx];
-
   if (mode === 'typing') {
     document.getElementById('app').innerHTML = `
       <div class="mode-badge">TYPING · 자유 영작</div>
       <div class="korean">${s.korean_text}</div>
-      <input type="text" class="typing-input" id="typingInput"
-        placeholder="영어로 자유롭게 작문하세요" autocomplete="off" ${isAnswered ? 'disabled' : ''}>
+      <input type="text" class="typing-input" id="typingInput" placeholder="영어로 자유롭게 작문하세요" autocomplete="off" ${isAnswered ? 'disabled' : ''}>
       <div class="hint-line" id="hintLine"></div>
       <div class="controls">
         <button class="action" onclick="checkTyping()" id="submitBtn">채점 (Enter)</button>
@@ -398,6 +297,7 @@ function render() {
       </div>
       <div id="feedback-area"></div>
       <div id="pattern-area"></div>
+      <div id="collect-area"></div>
     `;
     document.getElementById('hintbar').textContent = 'Tab: 청크 힌트 · Enter: 채점 · N: 다음';
     const input = document.getElementById('typingInput');
@@ -415,7 +315,6 @@ function render() {
     const poolHTML = chunks.map((c, i) =>
       `<button class="chunk ${c.selected ? 'selected' : ''}" onclick="toggleChunk(${i})"><span class="chunk-key">${c.key}</span>${c.text}</button>`
     ).join('');
-
     document.getElementById('app').innerHTML = `
       <div class="mode-badge">FIRST LOOK · SCRAMBLE</div>
       <div class="korean">${s.korean_text}</div>
@@ -428,61 +327,51 @@ function render() {
       </div>
       <div id="feedback-area"></div>
       <div id="pattern-area"></div>
+      <div id="collect-area"></div>
     `;
     document.getElementById('hintbar').textContent = '0~9, a~f: 청크 토글 · Esc: 클리어 · Enter: 확인 · N: 다음';
   }
 }
 
-// ===== 타이핑 힌트 =====
 function renderHints() {
   const s = session[sIdx];
   const el = document.getElementById('hintLine');
   if (!el) return;
-
-  const shown = s.chunks.slice(0, hintCount)
-    .map(c => `<span class="hint-chunk">${c}</span>`).join('');
+  const shown = s.chunks.slice(0, hintCount).map(c => `<span class="hint-chunk">${c}</span>`).join('');
   const more = hintCount < s.chunks.length
     ? `<span style="color:#bbb; font-size:12px;">Tab: 힌트 더 보기 (${hintCount}/${s.chunks.length})</span>`
     : `<span style="color:#bbb; font-size:12px;">전체 힌트 표시됨</span>`;
   el.innerHTML = shown + (shown ? ' ' : '') + more;
 }
-
 function revealHint() {
   if (isAnswered) return;
   const s = session[sIdx];
   if (hintCount < s.chunks.length) { hintCount++; renderHints(); }
 }
 
-// ===== 정규화 & diff (타이핑 소극적 수정용) =====
+// ===== 타이핑 diff =====
 function normalizeForCompare(t) {
   return t.toLowerCase().replace(/[’]/g, "'").replace(/[.,!?"“”]/g, '').replace(/\s+/g, ' ').trim();
 }
-
 function renderMinorText(userInput, minor) {
-  if (normalizeForCompare(userInput) === normalizeForCompare(minor)) {
-    return { same: true, html: '' };
-  }
-  const uw = userInput.split(/\s+/);
-  const mw = minor.split(/\s+/);
+  if (normalizeForCompare(userInput) === normalizeForCompare(minor)) return { same: true, html: '' };
+  const uw = userInput.split(/\s+/), mw = minor.split(/\s+/);
   const marked = mw.map((w, i) =>
     (normalizeForCompare(uw[i] || '') !== normalizeForCompare(w))
-      ? `<span style="color:#c0392b; font-weight:600; text-decoration:underline;">${w}</span>`
-      : w
+      ? `<span style="color:#c0392b; font-weight:600; text-decoration:underline;">${w}</span>` : w
   ).join(' ');
   return { same: false, html: marked };
 }
 
-// ===== 타이핑 LLM 채점 =====
+// ===== 타이핑 채점 =====
 async function checkTyping() {
   if (isAnswered) return;
   const input = document.getElementById('typingInput');
   const userText = input.value.trim();
   if (!userText) return;
-
   attemptCount++;
   const s = session[sIdx];
   const allHintsOpen = hintCount >= s.chunks.length;
-
   const fb = document.getElementById('feedback-area');
   document.getElementById('submitBtn').disabled = true;
   fb.innerHTML = `<div class="spinner-text">AI가 채점 중입니다...</div>`;
@@ -490,31 +379,20 @@ async function checkTyping() {
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'gradeTyping',
-        korean_text: s.korean_text,
-        reference_answer: s.english_text,
-        user_input: userText
-      })
+      body: JSON.stringify({ action: 'gradeTyping', korean_text: s.korean_text, reference_answer: s.english_text, user_input: userText })
     });
     const g = await res.json();
     const verdict = g.verdict || 'partial';
     const isPass = verdict === 'pass';
-
     logAttempt(s.id, isPass, attemptCount, userText);
-
-    if (attemptCount === 1 && !allHintsOpen) {
-      sessionResults.push({ counted: true, first_pass: isPass });
-    } else if (attemptCount === 1 && allHintsOpen) {
-      sessionResults.push({ counted: false, first_pass: false });
-    }
-
+    if (attemptCount === 1 && !allHintsOpen) sessionResults.push({ counted: true, first_pass: isPass });
+    else if (attemptCount === 1 && allHintsOpen) sessionResults.push({ counted: false, first_pass: false });
     renderGrade(g, s, userText);
-
     if (isPass) {
       isAnswered = true;
       document.getElementById('typingInput').disabled = true;
       fetchPatternNote(s.id);
+      renderCollectButton(s);
     } else {
       document.getElementById('submitBtn').disabled = false;
     }
@@ -528,9 +406,7 @@ function renderGrade(g, s, userText) {
   const verdict = g.verdict || 'partial';
   const labelMap = { pass: '통과', partial: '부분 통과', retry: '다시 시도' };
   const fb = document.getElementById('feedback-area');
-
   const minorResult = g.minor ? renderMinorText(userText, g.minor) : null;
-
   let minorRow = '';
   if (minorResult) {
     if (minorResult.same) {
@@ -541,13 +417,9 @@ function renderGrade(g, s, userText) {
         <div class="text">${minorResult.html}</div></div>`;
     }
   }
-
   fb.innerHTML = `
     <div class="grade ${verdict}">
-      <div class="grade-head">
-        <span class="verdict-tag">${labelMap[verdict]}</span>
-        ${verdict === 'retry' ? '의미를 다시 확인해보세요' : ''}
-      </div>
+      <div class="grade-head"><span class="verdict-tag">${labelMap[verdict]}</span>${verdict === 'retry' ? '의미를 다시 확인해보세요' : ''}</div>
       <div class="grade-body">
         ${minorRow}
         ${(verdict !== 'retry' && g.native) ? `<div class="grade-row native"><div class="label">적극적 수정 · 네이티브 AL</div><div class="text">${g.native}</div></div>` : ''}
@@ -561,58 +433,35 @@ function renderGrade(g, s, userText) {
 function toggleChunk(idx) {
   if (isAnswered || mode !== 'scramble') return;
   const c = chunks[idx];
-  if (c.selected) {
-    c.selected = false;
-    assembledOrder = assembledOrder.filter(i => i !== idx);
-  } else {
-    c.selected = true;
-    assembledOrder.push(idx);
-  }
+  if (c.selected) { c.selected = false; assembledOrder = assembledOrder.filter(i => i !== idx); }
+  else { c.selected = true; assembledOrder.push(idx); }
   render();
 }
-
 function clearAssembled() {
   if (isAnswered) return;
-  chunks.forEach(c => c.selected = false);
-  assembledOrder = [];
-  render();
+  chunks.forEach(c => c.selected = false); assembledOrder = []; render();
 }
-
-// LCS 기반 위치 정오 판정
 function markScrambleCorrectness(userArr, answerArr) {
   const n = userArr.length, m = answerArr.length;
   const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-  for (let i = 1; i <= n; i++) {
-    for (let j = 1; j <= m; j++) {
-      dp[i][j] = (userArr[i-1] === answerArr[j-1])
-        ? dp[i-1][j-1] + 1
-        : Math.max(dp[i-1][j], dp[i][j-1]);
-    }
-  }
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++)
+    dp[i][j] = (userArr[i-1] === answerArr[j-1]) ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
   const correct = new Array(n).fill(false);
   let i = n, j = m;
   while (i > 0 && j > 0) {
     if (userArr[i-1] === answerArr[j-1]) { correct[i-1] = true; i--; j--; }
-    else if (dp[i-1][j] >= dp[i][j-1]) i--;
-    else j--;
+    else if (dp[i-1][j] >= dp[i][j-1]) i--; else j--;
   }
   return correct;
 }
-
 function renderAnswerStrip(answerArr) {
-  return `
-    <div class="strip-label">정답 배열</div>
-    <div class="answer-strip">
-      ${answerArr.map(t => `<span class="chunk-mini">${t}</span>`).join('')}
-    </div>`;
+  return `<div class="strip-label">정답 배열</div><div class="answer-strip">${answerArr.map(t => `<span class="chunk-mini">${t}</span>`).join('')}</div>`;
 }
-
 function showAnswerStrip() {
   const s = session[sIdx];
   const area = document.getElementById('answer-strip-area');
   if (area) area.innerHTML = renderAnswerStrip(s.chunks);
 }
-
 function checkScramble() {
   if (assembledOrder.length === 0 || isAnswered) return;
   attemptCount++;
@@ -622,72 +471,237 @@ function checkScramble() {
   const userText = userArr.join(' ');
   const isCorrect = userText === answerArr.join(' ');
   logAttempt(s.id, isCorrect, attemptCount, userText);
-
   const fb = document.getElementById('feedback-area');
-
   if (isCorrect) {
     isAnswered = true;
     if (attemptCount === 1) sessionResults.push({ counted: true, first_pass: true });
     else if (sessionResults.length < sIdx + 1) sessionResults.push({ counted: true, first_pass: false });
-    fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)
-      <div class="answer">${s.english_text}</div></div>`;
+    fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)<div class="answer">${s.english_text}</div></div>`;
     fetchPatternNote(s.id);
+    renderCollectButton(s);
     return;
   }
-
-  // 오답: 위치 정오 색칠
   const correctFlags = markScrambleCorrectness(userArr, answerArr);
   document.querySelectorAll('.assembled .chunk').forEach((el, idx) => {
     el.classList.remove('in-assembled');
     el.classList.add(correctFlags[idx] ? 'correct-pos' : 'wrong-pos');
   });
-
   fb.innerHTML = `
     <div class="feedback incorrect">
       <div>초록은 자리가 맞는 청크, 빨강은 위치가 어긋난 청크예요. 빨강만 옮겨보세요.</div>
-      <div style="margin-top:10px;">
-        <button class="action secondary" onclick="showAnswerStrip()">정답 배열 보기</button>
-      </div>
+      <div style="margin-top:10px;"><button class="action secondary" onclick="showAnswerStrip()">정답 배열 보기</button></div>
       <div id="answer-strip-area" style="margin-top:12px;"></div>
       <div id="scramble-hint" class="spinner-text" style="margin-top:10px;">AI 힌트 준비 중...</div>
     </div>`;
-
   requestScrambleHint(s, userText);
 }
-
 async function requestScrambleHint(s, userText) {
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'analyzeError',
-        korean_text: s.korean_text,
-        correct_answer: s.english_text,
-        user_input: userText,
-        attempt_number: attemptCount
-      })
+      body: JSON.stringify({ action: 'analyzeError', korean_text: s.korean_text, correct_answer: s.english_text, user_input: userText, attempt_number: attemptCount })
     });
     const data = await res.json();
     const el = document.getElementById('scramble-hint');
-    if (el && !isAnswered) {
-      el.classList.remove('spinner-text');
-      el.style.color = '#7a2a2a';
-      el.textContent = data.hint || '';
+    if (el && !isAnswered) { el.classList.remove('spinner-text'); el.style.color = '#7a2a2a'; el.textContent = data.hint || ''; }
+  } catch (err) { console.error('힌트 오류:', err); }
+}
+
+// ===== 수집 UI =====
+function renderCollectButton(s) {
+  const area = document.getElementById('collect-area');
+  if (!area) return;
+  area.innerHTML = `<button class="mini" onclick="openCollectBox('${s.id}')">+ 표현 수집</button>`;
+}
+
+function openCollectBox(sentenceId) {
+  const s = session[sIdx];
+  const area = document.getElementById('collect-area');
+  area.innerHTML = `
+    <div class="collect-box">
+      <div class="cb-label">수집할 단어 · 표현</div>
+      <input type="text" id="collectTerm" placeholder="예: unwind" autocomplete="off">
+      <input type="text" id="collectMine" placeholder="내 뜻 (선택 - 비우면 AI가 자동 생성)" autocomplete="off">
+      <div class="cb-row">
+        <select class="type-select" id="collectType">
+          <option value="word">단어</option>
+          <option value="phrase">표현</option>
+          <option value="sentence">문장</option>
+        </select>
+        <button class="action" onclick="submitCollect('${sentenceId}')" id="collectSaveBtn">저장</button>
+        <span id="collect-status" class="spinner-text"></span>
+      </div>
+    </div>`;
+  const termInput = document.getElementById('collectTerm');
+  termInput.focus();
+  // 입력 단어 수로 type 자동 추정
+  termInput.addEventListener('input', () => {
+    const wc = termInput.value.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('collectType').value = wc <= 1 ? 'word' : (wc <= 4 ? 'phrase' : 'sentence');
+  });
+}
+
+async function submitCollect(sentenceId) {
+  const term = document.getElementById('collectTerm').value.trim();
+  if (!term) { document.getElementById('collect-status').textContent = '표현을 입력하세요'; return; }
+  const mine = document.getElementById('collectMine').value.trim();
+  const type = document.getElementById('collectType').value;
+  const s = session[sIdx];
+  const btn = document.getElementById('collectSaveBtn');
+  const status = document.getElementById('collect-status');
+  btn.disabled = true;
+  status.textContent = 'AI가 뜻·용례 생성 중...';
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'saveCollection', type, term, meaning_mine: mine,
+        source_sentence_id: sentenceId, source_english: s.english_text
+      })
+    });
+    const data = await res.json();
+    const area = document.getElementById('collect-area');
+    if (data.success) {
+      area.innerHTML = `<div class="collect-done">수집 완료 · <b>${term}</b> — ${mine || data.meaning_ai}</div>`;
+    } else {
+      status.textContent = '저장 실패: ' + (data.error || '');
+      btn.disabled = false;
     }
   } catch (err) {
-    const el = document.getElementById('scramble-hint');
-    if (el) el.textContent = '';
-    console.error('힌트 오류:', err);
+    status.textContent = '오류: ' + err.message;
+    btn.disabled = false;
   }
+}
+
+// ===== 수집함 보기 =====
+async function openCollection() {
+  document.getElementById('progress').textContent = '';
+  document.getElementById('hintbar').textContent = '';
+  document.getElementById('app').innerHTML = `<div class="loading">수집함 불러오는 중...</div>`;
+  try {
+    const res = await fetch(`${GAS_URL}?action=getCollection`);
+    const data = await res.json();
+    const items = (data.items || []).reverse();
+    if (items.length === 0) {
+      document.getElementById('app').innerHTML = `
+        <div class="empty-note">아직 수집한 표현이 없습니다.</div>
+        <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
+      return;
+    }
+    const list = items.map(it => `
+      <div class="coll-item">
+        <div><span class="coll-term">${it.term}</span><span class="coll-type">${it.type}</span></div>
+        ${it.meaning_mine ? `<div class="coll-meaning">내 뜻 · ${it.meaning_mine}</div>` : ''}
+        <div class="coll-ai">AI 기준 뜻 · ${it.meaning_ai || '-'}</div>
+        ${it.usage ? `<div class="coll-usage">용례 · ${it.usage}</div>` : ''}
+      </div>`).join('');
+    document.getElementById('app').innerHTML = `
+      <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:14px; color:#666;">수집한 표현 ${items.length}개</div>
+        <button class="action secondary" onclick="renderStart()">돌아가기</button>
+      </div>
+      ${list}`;
+  } catch (err) {
+    document.getElementById('app').innerHTML = `<div class="feedback incorrect">불러오기 실패: ${err.message}</div>`;
+  }
+}
+
+// ===== 수집 퀴즈 =====
+async function startQuiz() {
+  document.getElementById('progress').textContent = '';
+  document.getElementById('hintbar').textContent = '';
+  document.getElementById('app').innerHTML = `<div class="loading">퀴즈 준비 중...</div>`;
+  try {
+    const res = await fetch(`${GAS_URL}?action=getCollection`);
+    const data = await res.json();
+    let items = (data.items || []).filter(it => it.meaning_mine || it.meaning_ai);
+    if (items.length < 4) {
+      document.getElementById('app').innerHTML = `
+        <div class="empty-note">퀴즈를 만들려면 뜻이 있는 수집 표현이 4개 이상 필요합니다.<br>(현재 ${items.length}개)</div>
+        <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
+      return;
+    }
+    // 정답률 낮은 것 우선 + 셔플
+    items.sort((a, b) => {
+      const ra = Number(a.quiz_count) ? Number(a.correct_count) / Number(a.quiz_count) : 0;
+      const rb = Number(b.quiz_count) ? Number(b.correct_count) / Number(b.quiz_count) : 0;
+      return ra - rb;
+    });
+    quizItems = items.slice(0, Math.min(10, items.length));
+    quizItems = shuffle(quizItems);
+    qIdx = 0; quizScore = 0;
+    renderQuizQuestion();
+  } catch (err) {
+    document.getElementById('app').innerHTML = `<div class="feedback incorrect">퀴즈 로드 실패: ${err.message}</div>`;
+  }
+}
+
+function meaningOf(it) { return it.meaning_mine || it.meaning_ai; }
+
+function renderQuizQuestion() {
+  if (qIdx >= quizItems.length) { renderQuizSummary(); return; }
+  const cur = quizItems[qIdx];
+  // 오답 보기: 다른 항목들의 term에서 3개
+  const others = shuffle(quizItems.filter(it => it.id !== cur.id)).slice(0, 3).map(it => it.term);
+  const options = shuffle([cur.term, ...others]);
+
+  document.getElementById('progress').textContent = `${qIdx + 1} / ${quizItems.length}`;
+  document.getElementById('app').innerHTML = `
+    <div class="quiz-card">
+      <div class="quiz-sub">이 뜻에 해당하는 표현은?</div>
+      <div class="quiz-q">${meaningOf(cur)}</div>
+      <div class="controls" style="flex-direction:column; align-items:stretch;">
+        ${options.map(opt => `<button class="action secondary" style="margin-bottom:8px;" onclick="answerQuiz('${encodeURIComponent(opt)}')">${opt}</button>`).join('')}
+      </div>
+      <div id="quiz-feedback"></div>
+    </div>`;
+}
+
+async function answerQuiz(encoded) {
+  const chosen = decodeURIComponent(encoded);
+  const cur = quizItems[qIdx];
+  const correct = chosen === cur.term;
+  if (correct) quizScore++;
+
+  updateQuizStat(cur.id, correct);
+
+  const fb = document.getElementById('quiz-feedback');
+  fb.innerHTML = correct
+    ? `<div class="feedback correct">정답! <b>${cur.term}</b></div>
+       <button class="action" onclick="nextQuiz()">다음</button>`
+    : `<div class="feedback incorrect">정답은 <b>${cur.term}</b> 입니다.
+       ${cur.usage ? `<div style="margin-top:6px; font-size:13px; color:#777;">용례 · ${cur.usage}</div>` : ''}</div>
+       <button class="action" onclick="nextQuiz()">다음</button>`;
+  // 선택지 버튼 비활성화
+  document.querySelectorAll('.quiz-card .action.secondary').forEach(b => b.disabled = true);
+}
+
+function nextQuiz() { qIdx++; renderQuizQuestion(); }
+
+function renderQuizSummary() {
+  const rate = quizItems.length ? Math.round(quizScore / quizItems.length * 100) : 0;
+  document.getElementById('progress').textContent = '';
+  document.getElementById('app').innerHTML = `
+    <div class="summary-panel">
+      <h2>퀴즈 완료</h2>
+      <div class="big-number">${quizScore} / ${quizItems.length}</div>
+      <div class="sub-metric">정답률 ${rate}%</div>
+      <button class="action" onclick="startQuiz()">한 번 더</button>
+      <button class="action secondary" onclick="renderStart()" style="margin-left:8px;">돌아가기</button>
+    </div>`;
+}
+
+async function updateQuizStat(id, correct) {
+  try {
+    await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateQuizStat', id, correct }) });
+  } catch (err) { console.error('퀴즈 통계 실패:', err); }
 }
 
 // ===== 패턴 노트 =====
 async function fetchPatternNote(sentenceId) {
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'getPatternNote', sentence_id: sentenceId })
-    });
+    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'getPatternNote', sentence_id: sentenceId }) });
     const data = await res.json();
     const el = document.getElementById('pattern-area');
     if (el && data.note) el.innerHTML = `<div class="pattern-note">패턴 · ${data.note}</div>`;
@@ -696,25 +710,19 @@ async function fetchPatternNote(sentenceId) {
 
 // ===== 다음 =====
 function nextQuestion() {
-  if (!isAnswered && sessionResults.length < sIdx + 1) {
-    sessionResults.push({ counted: false, first_pass: false });
-  }
+  if (!isAnswered && sessionResults.length < sIdx + 1) sessionResults.push({ counted: false, first_pass: false });
   sIdx++;
   loadQuestion();
 }
 
-// ===== 요약 =====
+// ===== 세션 요약 =====
 function renderSummary() {
   const counted = sessionResults.filter(r => r.counted);
   const passed = counted.filter(r => r.first_pass).length;
   const rate = counted.length > 0 ? Math.round(passed / counted.length * 100) : 0;
-
   let cumAttempted = 0, cumFirst = 0;
-  allSentences.forEach(s => {
-    if (s.stats.attempts > 0) { cumAttempted++; if (s.stats.first_try_success > 0) cumFirst++; }
-  });
+  allSentences.forEach(s => { if (s.stats.attempts > 0) { cumAttempted++; if (s.stats.first_try_success > 0) cumFirst++; } });
   const cumRate = cumAttempted > 0 ? Math.round(cumFirst / cumAttempted * 100) : 0;
-
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
   document.getElementById('app').innerHTML = `
@@ -722,9 +730,8 @@ function renderSummary() {
       <h2>세션 완료</h2>
       <div class="big-number">${rate}%</div>
       <div class="sub-metric">이번 세션 첫시도 통과율 (${passed}/${counted.length}, 힌트 전체 사용 제외) · 누적 ${cumRate}%</div>
-      <button class="action" onclick="location.reload()">새 세션 시작</button>
-    </div>
-  `;
+      <button class="action" onclick="renderStart()">새 세션 시작</button>
+    </div>`;
 }
 
 // ===== 로그 =====
@@ -732,13 +739,7 @@ async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
   try {
     await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'logAttempt',
-        sentence_id: sentenceId,
-        is_correct: isCorrect,
-        attempt_number: attemptNumber,
-        user_input: userInput
-      })
+      body: JSON.stringify({ action: 'logAttempt', sentence_id: sentenceId, is_correct: isCorrect, attempt_number: attemptNumber, user_input: userInput })
     });
   } catch (err) { console.error('로그 실패:', err); }
 }
@@ -747,7 +748,6 @@ async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
 document.addEventListener('keydown', (e) => {
   if (e.target.matches('input, textarea, select')) return;
   const key = e.key.toLowerCase();
-
   if (mode === 'scramble') {
     if (KEY_MAP.includes(key)) {
       const idx = KEY_MAP.indexOf(key);
@@ -760,9 +760,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (isAnswered) nextQuestion();
     else if (mode === 'scramble') checkScramble();
-  } else if (key === 'n' && isAnswered) {
-    nextQuestion();
-  }
+  } else if (key === 'n' && isAnswered) { nextQuestion(); }
 });
 
 // ===== 유틸 =====
