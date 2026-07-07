@@ -74,7 +74,7 @@
   .chunk.correct-pos { background: #eaf6ea; border-color: #7bbb7b; color: #2a5a2a; }
   .chunk.wrong-pos { background: #fbeaea; border-color: #dd9999; color: #a33; }
   .chunk-key { font-size: 11px; color: #999; margin-right: 6px; font-weight: 600; }
-  .chunk.selected .chunk-key { color: #aaa; }
+  .chunk.selected .chunk-key { color: #ccc; }
 
   .answer-strip {
     display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; background: #f0f7f0;
@@ -126,7 +126,6 @@
     margin-bottom: 12px; font-size: 13px; color: #55552a;
   }
 
-  /* 수집 UI */
   .collect-box {
     margin-top: 8px; padding: 14px 16px; background: #f7f9fb; border: 1px solid #d8e2ea;
     border-radius: 6px; margin-bottom: 12px;
@@ -141,7 +140,6 @@
   .type-select { padding: 8px 10px; border: 1px solid #cdd8e0; border-radius: 4px; font-size: 13px; font-family: inherit; background: #fff; }
   .collect-done { font-size: 13px; color: #2a5a2a; padding: 8px 0; }
 
-  /* 수집함 */
   .coll-item {
     padding: 14px 16px; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; margin-bottom: 10px;
   }
@@ -151,7 +149,6 @@
   .coll-ai { font-size: 12px; color: #999; margin-top: 3px; }
   .coll-usage { font-size: 12px; color: #7a7a5a; margin-top: 5px; font-style: italic; }
 
-  /* 퀴즈 */
   .quiz-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 28px; text-align: center; }
   .quiz-q { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
   .quiz-sub { font-size: 12px; color: #999; margin-bottom: 20px; }
@@ -189,8 +186,6 @@ let chunks = [], assembledOrder = [];
 let hintCount = 0, attemptCount = 0, isAnswered = false;
 let sessionResults = [];
 let selCount = 5, selTag = 'All';
-
-// 퀴즈 상태
 let quizItems = [], qIdx = 0, quizScore = 0;
 
 // ===== 초기화 =====
@@ -207,7 +202,6 @@ async function init() {
       `<div class="feedback incorrect">데이터를 불러오지 못했습니다: ${err.message}</div>`;
   }
 }
-
 function goHome() { renderStart(); }
 
 // ===== 시작 화면 =====
@@ -215,7 +209,6 @@ function renderStart() {
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
   const tags = ['All', ...new Set(allSentences.flatMap(s => String(s.tags).split(',').map(t => t.trim())).filter(Boolean))];
-
   document.getElementById('app').innerHTML = `
     <div class="start-panel">
       <h2>오늘의 세션</h2>
@@ -237,8 +230,7 @@ function renderStart() {
         <button class="action secondary" onclick="openCollection()">수집함 보기</button>
         <button class="action secondary" onclick="startQuiz()">수집 퀴즈</button>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 function setCount(n) { selCount = n; renderStart(); }
 
@@ -251,7 +243,6 @@ function startSession() {
   const seen = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
     .sort((a, b) => String(a.stats.last_seen).localeCompare(String(b.stats.last_seen)));
   session = [...shuffle(wrong), ...unseen, ...seen].slice(0, selCount);
-
   if (session.length === 0) {
     document.getElementById('app').innerHTML =
       `<div class="feedback incorrect">해당 조건의 문장이 없습니다.</div>
@@ -298,8 +289,7 @@ function render() {
       </div>
       <div id="feedback-area"></div>
       <div id="pattern-area"></div>
-      <div id="collect-area"></div>
-    `;
+      <div id="collect-area"></div>`;
     document.getElementById('hintbar').textContent = 'Tab: 청크 힌트 · Enter: 채점 · N: 다음';
     const input = document.getElementById('typingInput');
     input.focus();
@@ -328,8 +318,7 @@ function render() {
       </div>
       <div id="feedback-area"></div>
       <div id="pattern-area"></div>
-      <div id="collect-area"></div>
-    `;
+      <div id="collect-area"></div>`;
     document.getElementById('hintbar').textContent = '0~9, a~f: 청크 토글 · Esc: 클리어 · Enter: 확인 · N: 다음';
   }
 }
@@ -376,7 +365,6 @@ async function checkTyping() {
   const fb = document.getElementById('feedback-area');
   document.getElementById('submitBtn').disabled = true;
   fb.innerHTML = `<div class="spinner-text">AI가 채점 중입니다...</div>`;
-
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
@@ -426,8 +414,7 @@ function renderGrade(g, s, userText) {
         ${(verdict !== 'retry' && g.native) ? `<div class="grade-row native"><div class="label">적극적 수정 · 네이티브 AL</div><div class="text">${g.native}</div></div>` : ''}
         ${g.comment ? `<div class="grade-comment">${g.comment}</div>` : ''}
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 // ===== Scramble =====
@@ -516,7 +503,6 @@ function renderCollectButton(s) {
 }
 
 function openCollectBox(sentenceId) {
-  const s = session[sIdx];
   const area = document.getElementById('collect-area');
   area.innerHTML = `
     <div class="collect-box">
@@ -535,30 +521,52 @@ function openCollectBox(sentenceId) {
     </div>`;
   const termInput = document.getElementById('collectTerm');
   termInput.focus();
-  // 입력 단어 수로 type 자동 추정
   termInput.addEventListener('input', () => {
     const wc = termInput.value.trim().split(/\s+/).filter(Boolean).length;
     document.getElementById('collectType').value = wc <= 1 ? 'word' : (wc <= 4 ? 'phrase' : 'sentence');
   });
 }
 
-async function fetchPatternNote(sentenceId) {
-  const el = document.getElementById('pattern-area');
-  if (!el) return;
-  // 로컬 데이터에 이미 pattern_note가 있으면 서버 호출 없이 바로 표시
-  const local = session[sIdx];
-  if (local && local.pattern_note) {
-    el.innerHTML = `<div class="pattern-note">패턴 · ${local.pattern_note}</div>`;
-    return;
-  }
+async function submitCollect(sentenceId) {
+  const term = document.getElementById('collectTerm').value.trim();
+  if (!term) { document.getElementById('collect-status').textContent = '표현을 입력하세요'; return; }
+  const mine = document.getElementById('collectMine').value.trim();
+  const type = document.getElementById('collectType').value;
+  const s = session[sIdx];
+  const btn = document.getElementById('collectSaveBtn');
+  const status = document.getElementById('collect-status');
+  btn.disabled = true;
+  status.textContent = 'AI가 뜻·용례 생성 중...';
   try {
-    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'getPatternNote', sentence_id: sentenceId }) });
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'saveCollection', type, term, meaning_mine: mine,
+        source_sentence_id: sentenceId, source_english: s.english_text
+      })
+    });
     const data = await res.json();
-    if (data.note) el.innerHTML = `<div class="pattern-note">패턴 · ${data.note}</div>`;
-  } catch (err) { console.error('패턴 노트 오류:', err); }
+    const area = document.getElementById('collect-area');
+    if (data.success) {
+      let warn = '';
+      if (data.mismatch) {
+        warn = `<div style="margin-top:6px; padding:8px 12px; background:#fdf6ec; border:1px solid #ecd9b8; border-radius:4px; font-size:13px; color:#8a5a1a;">
+          적으신 뜻이 이 문맥과 다를 수 있어요 · ${data.mismatch_note || ''}<br>
+          <span style="color:#666;">AI 기준 뜻 · ${data.meaning_ai}</span>
+        </div>`;
+      }
+      area.innerHTML = `<div class="collect-done">수집 완료 · <b>${term}</b> — ${mine || data.meaning_ai}</div>${warn}`;
+    } else {
+      status.textContent = '저장 실패: ' + (data.error || '');
+      btn.disabled = false;
+    }
+  } catch (err) {
+    status.textContent = '오류: ' + err.message;
+    btn.disabled = false;
+  }
 }
 
-// ===== 수집함 보기 =====
+// ===== 수집함 =====
 async function openCollection() {
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
@@ -606,30 +614,24 @@ async function startQuiz() {
         <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
       return;
     }
-    // 정답률 낮은 것 우선 + 셔플
     items.sort((a, b) => {
       const ra = Number(a.quiz_count) ? Number(a.correct_count) / Number(a.quiz_count) : 0;
       const rb = Number(b.quiz_count) ? Number(b.correct_count) / Number(b.quiz_count) : 0;
       return ra - rb;
     });
-    quizItems = items.slice(0, Math.min(10, items.length));
-    quizItems = shuffle(quizItems);
+    quizItems = shuffle(items.slice(0, Math.min(10, items.length)));
     qIdx = 0; quizScore = 0;
     renderQuizQuestion();
   } catch (err) {
     document.getElementById('app').innerHTML = `<div class="feedback incorrect">퀴즈 로드 실패: ${err.message}</div>`;
   }
 }
-
 function meaningOf(it) { return it.meaning_mine || it.meaning_ai; }
-
 function renderQuizQuestion() {
   if (qIdx >= quizItems.length) { renderQuizSummary(); return; }
   const cur = quizItems[qIdx];
-  // 오답 보기: 다른 항목들의 term에서 3개
   const others = shuffle(quizItems.filter(it => it.id !== cur.id)).slice(0, 3).map(it => it.term);
   const options = shuffle([cur.term, ...others]);
-
   document.getElementById('progress').textContent = `${qIdx + 1} / ${quizItems.length}`;
   document.getElementById('app').innerHTML = `
     <div class="quiz-card">
@@ -641,28 +643,21 @@ function renderQuizQuestion() {
       <div id="quiz-feedback"></div>
     </div>`;
 }
-
 async function answerQuiz(encoded) {
   const chosen = decodeURIComponent(encoded);
   const cur = quizItems[qIdx];
   const correct = chosen === cur.term;
   if (correct) quizScore++;
-
   updateQuizStat(cur.id, correct);
-
   const fb = document.getElementById('quiz-feedback');
   fb.innerHTML = correct
-    ? `<div class="feedback correct">정답! <b>${cur.term}</b></div>
-       <button class="action" onclick="nextQuiz()">다음</button>`
+    ? `<div class="feedback correct">정답! <b>${cur.term}</b></div><button class="action" onclick="nextQuiz()">다음</button>`
     : `<div class="feedback incorrect">정답은 <b>${cur.term}</b> 입니다.
        ${cur.usage ? `<div style="margin-top:6px; font-size:13px; color:#777;">용례 · ${cur.usage}</div>` : ''}</div>
        <button class="action" onclick="nextQuiz()">다음</button>`;
-  // 선택지 버튼 비활성화
   document.querySelectorAll('.quiz-card .action.secondary').forEach(b => b.disabled = true);
 }
-
 function nextQuiz() { qIdx++; renderQuizQuestion(); }
-
 function renderQuizSummary() {
   const rate = quizItems.length ? Math.round(quizScore / quizItems.length * 100) : 0;
   document.getElementById('progress').textContent = '';
@@ -675,20 +670,25 @@ function renderQuizSummary() {
       <button class="action secondary" onclick="renderStart()" style="margin-left:8px;">돌아가기</button>
     </div>`;
 }
-
 async function updateQuizStat(id, correct) {
   try {
     await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateQuizStat', id, correct }) });
   } catch (err) { console.error('퀴즈 통계 실패:', err); }
 }
 
-// ===== 패턴 노트 =====
+// ===== 패턴 노트 (이미 있으면 호출 생략) =====
 async function fetchPatternNote(sentenceId) {
+  const el = document.getElementById('pattern-area');
+  if (!el) return;
+  const local = session[sIdx];
+  if (local && local.pattern_note) {
+    el.innerHTML = `<div class="pattern-note">패턴 · ${local.pattern_note}</div>`;
+    return;
+  }
   try {
     const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'getPatternNote', sentence_id: sentenceId }) });
     const data = await res.json();
-    const el = document.getElementById('pattern-area');
-    if (el && data.note) el.innerHTML = `<div class="pattern-note">패턴 · ${data.note}</div>`;
+    if (data.note) el.innerHTML = `<div class="pattern-note">패턴 · ${data.note}</div>`;
   } catch (err) { console.error('패턴 노트 오류:', err); }
 }
 
