@@ -141,8 +141,21 @@
   .chunk:hover { border-color: #555; }
   .chunk.selected { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
   .chunk.in-assembled { background: #f0f0f0; }
+  .chunk.correct-pos { background: #eaf6ea; border-color: #7bbb7b; color: #2a5a2a; }
+  .chunk.wrong-pos { background: #fbeaea; border-color: #dd9999; color: #a33; }
   .chunk-key { font-size: 11px; color: #999; margin-right: 6px; font-weight: 600; }
   .chunk.selected .chunk-key { color: #aaa; }
+
+  .answer-strip {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 12px 14px; background: #f0f7f0;
+    border: 1px solid #c8e0c8; border-radius: 6px;
+  }
+  .answer-strip .chunk-mini {
+    padding: 6px 12px; background: #fff; border: 1px solid #c8e0c8;
+    border-radius: 4px; font-size: 13px; color: #2a5a2a;
+  }
+  .strip-label { font-size: 11px; color: #6a8a6a; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
 
   .controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   button.action {
@@ -440,7 +453,7 @@ function revealHint() {
   if (hintCount < s.chunks.length) { hintCount++; renderHints(); }
 }
 
-// ===== 정규화 & diff =====
+// ===== 정규화 & diff (타이핑 소극적 수정용) =====
 function normalizeForCompare(t) {
   return t.toLowerCase().replace(/[’]/g, "'").replace(/[.,!?"“”]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -565,16 +578,53 @@ function clearAssembled() {
   render();
 }
 
+// LCS 기반 위치 정오 판정
+function markScrambleCorrectness(userArr, answerArr) {
+  const n = userArr.length, m = answerArr.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      dp[i][j] = (userArr[i-1] === answerArr[j-1])
+        ? dp[i-1][j-1] + 1
+        : Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  const correct = new Array(n).fill(false);
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    if (userArr[i-1] === answerArr[j-1]) { correct[i-1] = true; i--; j--; }
+    else if (dp[i-1][j] >= dp[i][j-1]) i--;
+    else j--;
+  }
+  return correct;
+}
+
+function renderAnswerStrip(answerArr) {
+  return `
+    <div class="strip-label">정답 배열</div>
+    <div class="answer-strip">
+      ${answerArr.map(t => `<span class="chunk-mini">${t}</span>`).join('')}
+    </div>`;
+}
+
+function showAnswerStrip() {
+  const s = session[sIdx];
+  const area = document.getElementById('answer-strip-area');
+  if (area) area.innerHTML = renderAnswerStrip(s.chunks);
+}
+
 function checkScramble() {
   if (assembledOrder.length === 0 || isAnswered) return;
   attemptCount++;
   const s = session[sIdx];
-  const userText = assembledOrder.map(i => chunks[i].text).join(' ');
-  const correctText = s.chunks.join(' ');
-  const isCorrect = userText === correctText;
+  const userArr = assembledOrder.map(i => chunks[i].text);
+  const answerArr = s.chunks;
+  const userText = userArr.join(' ');
+  const isCorrect = userText === answerArr.join(' ');
   logAttempt(s.id, isCorrect, attemptCount, userText);
 
   const fb = document.getElementById('feedback-area');
+
   if (isCorrect) {
     isAnswered = true;
     if (attemptCount === 1) sessionResults.push({ counted: true, first_pass: true });
@@ -582,11 +632,27 @@ function checkScramble() {
     fb.innerHTML = `<div class="feedback correct">정답입니다 (${attemptCount}번째 시도)
       <div class="answer">${s.english_text}</div></div>`;
     fetchPatternNote(s.id);
-  } else {
-    fb.innerHTML = `<div class="feedback incorrect">다시 시도해보세요
-      <div class="spinner-text" style="margin-top:8px;">AI 분석 중...</div></div>`;
-    requestScrambleHint(s, userText);
+    return;
   }
+
+  // 오답: 위치 정오 색칠
+  const correctFlags = markScrambleCorrectness(userArr, answerArr);
+  document.querySelectorAll('.assembled .chunk').forEach((el, idx) => {
+    el.classList.remove('in-assembled');
+    el.classList.add(correctFlags[idx] ? 'correct-pos' : 'wrong-pos');
+  });
+
+  fb.innerHTML = `
+    <div class="feedback incorrect">
+      <div>초록은 자리가 맞는 청크, 빨강은 위치가 어긋난 청크예요. 빨강만 옮겨보세요.</div>
+      <div style="margin-top:10px;">
+        <button class="action secondary" onclick="showAnswerStrip()">정답 배열 보기</button>
+      </div>
+      <div id="answer-strip-area" style="margin-top:12px;"></div>
+      <div id="scramble-hint" class="spinner-text" style="margin-top:10px;">AI 힌트 준비 중...</div>
+    </div>`;
+
+  requestScrambleHint(s, userText);
 }
 
 async function requestScrambleHint(s, userText) {
@@ -602,11 +668,17 @@ async function requestScrambleHint(s, userText) {
       })
     });
     const data = await res.json();
-    const fb = document.getElementById('feedback-area');
-    if (fb && !isAnswered) {
-      fb.innerHTML = `<div class="feedback incorrect">${data.hint || '다시 시도해보세요'}</div>`;
+    const el = document.getElementById('scramble-hint');
+    if (el && !isAnswered) {
+      el.classList.remove('spinner-text');
+      el.style.color = '#7a2a2a';
+      el.textContent = data.hint || '';
     }
-  } catch (err) { console.error('힌트 오류:', err); }
+  } catch (err) {
+    const el = document.getElementById('scramble-hint');
+    if (el) el.textContent = '';
+    console.error('힌트 오류:', err);
+  }
 }
 
 // ===== 패턴 노트 =====
