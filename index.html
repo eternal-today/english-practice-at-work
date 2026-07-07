@@ -649,6 +649,50 @@ async function saveMeaningEdit(slotId, id, inline) {
   }
 }
 
+// ===== 수집 항목 삭제 (2단계 확인: 첫 클릭 → '정말 삭제?' → 재클릭 시 실행) =====
+let _deleteArmed = {}; // id별 '삭제 준비됨' 상태
+function confirmDelete(id) {
+  const btn = document.getElementById(`del-${id}`);
+  if (!btn) return;
+  if (_deleteArmed[id]) { doDelete(id); return; }
+  _deleteArmed[id] = true;
+  btn.textContent = '정말 삭제?';
+  btn.style.fontWeight = '600';
+  // 3초 안에 재클릭 없으면 원상복구
+  _deleteArmed['_t_' + id] = setTimeout(() => {
+    _deleteArmed[id] = false;
+    if (document.getElementById(`del-${id}`)) {
+      btn.textContent = '삭제';
+      btn.style.fontWeight = '';
+    }
+  }, 3000);
+}
+async function doDelete(id) {
+  clearTimeout(_deleteArmed['_t_' + id]);
+  _deleteArmed[id] = false;
+  const btn = document.getElementById(`del-${id}`);
+  const status = document.getElementById(`del-status-${id}`);
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = '삭제 중...';
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteCollection', id })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const card = document.getElementById(`card-${id}`);
+      if (card) card.remove();
+    } else {
+      if (status) status.textContent = '삭제 실패: ' + (data.error || '');
+      if (btn) { btn.disabled = false; btn.textContent = '삭제'; btn.style.fontWeight = ''; }
+    }
+  } catch (err) {
+    if (status) status.textContent = '오류: ' + err.message;
+    if (btn) { btn.disabled = false; btn.textContent = '삭제'; btn.style.fontWeight = ''; }
+  }
+}
+
 // ===== 수집함 =====
 async function openCollection() {
   document.getElementById('progress').textContent = '';
@@ -667,13 +711,15 @@ async function openCollection() {
     const list = items.map(it => {
       const slotId = `meaning-edit-${escapeAttr(it.id)}`;
       return `
-      <div class="coll-item">
+      <div class="coll-item" id="card-${escapeAttr(it.id)}">
         <div><span class="coll-term">${escapeHtml(it.term)}</span><span class="coll-type">${escapeHtml(it.type)}</span></div>
         <div class="coll-meaning" id="mine-${escapeAttr(it.id)}">${it.meaning_mine ? '내 뜻 · ' + escapeHtml(it.meaning_mine) : '<span style="color:#bbb;">내 뜻 · (없음)</span>'}</div>
         <div class="coll-ai">AI 기준 뜻 · ${escapeHtml(it.meaning_ai) || '-'}</div>
         ${it.usage ? `<div class="coll-usage">용례 · ${escapeHtml(it.usage)}</div>` : ''}
-        <div id="${slotId}" style="margin-top:8px;">
+        <div id="${slotId}" style="margin-top:8px; display:flex; gap:8px; align-items:center;">
           <button class="mini" onclick="openMeaningEditor('${slotId}', '${escapeAttr(it.id)}', '${escapeAttr(it.meaning_ai || '')}', '${escapeAttr(it.meaning_mine || '')}', false)">뜻 수정</button>
+          <button class="mini" id="del-${escapeAttr(it.id)}" onclick="confirmDelete('${escapeAttr(it.id)}')" style="color:#a33;">삭제</button>
+          <span id="del-status-${escapeAttr(it.id)}" class="spinner-text"></span>
         </div>
       </div>`;
     }).join('');
