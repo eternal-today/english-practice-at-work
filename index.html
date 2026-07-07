@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stealth AL</title>
+<!--
+  Stealth AL — 프론트엔드 (GitHub Pages 정적 호스팅용)
+  배포 전: 아래 <script> 안 GAS_URL 에 본인 GAS 웹앱 URL 입력
+-->
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -63,6 +67,7 @@
     display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 14px;
     background: #f5f5f5; border-radius: 6px;
   }
+  /* 색 대비 반전: 조립 영역이 진하게(무게중심), 풀은 연하게 */
   .chunk {
     padding: 9px 14px; background: #f2f2f2; border: 1px solid #dcdcdc; border-radius: 4px;
     font-size: 14px; color: #888; cursor: pointer; font-family: inherit;
@@ -176,7 +181,7 @@
 
 <script>
 // ===== 설정 =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwm3Htan4X_r_zVgyGgnuxKhp6OdOKJGwvpOfJLBM3t08R4x1H0o67z57FysVW7BiWN/exec'; // ← 본인 GAS 웹앱 URL
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwm3Htan4X_r_zVgyGgnuxKhp6OdOKJGwvpOfJLBM3t08R4x1H0o67z57FysVW7BiWN/exec'; // ← 본인 GAS 웹앱 URL 입력
 const KEY_MAP = '0123456789abcdef';
 
 // ===== 상태 =====
@@ -188,7 +193,7 @@ let sessionResults = [];
 let selCount = 5, selTag = 'All';
 let quizItems = [], qIdx = 0, quizScore = 0;
 
-// ===== 초기화 =====
+// ===== 초기화 (안 푼 문장 10개 미만일 때만 5개 보충) =====
 async function init() {
   try {
     const res = await fetch(`${GAS_URL}?action=getSentences`);
@@ -196,7 +201,6 @@ async function init() {
     allSentences = data.sentences;
     renderStart();
 
-    // 안 푼 문장(unseen)이 10개 미만일 때만 5개 보충
     const unseenCount = allSentences.filter(s => s.stats.attempts === 0).length;
     if (unseenCount < 10) {
       fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'generateSentences', count: 5 }) })
@@ -239,7 +243,7 @@ function renderStart() {
 }
 function setCount(n) { selCount = n; renderStart(); }
 
-// ===== 세션 구성 =====
+// ===== 세션 구성 (틀린 문장 우선 → 안 본 문장 → 오래 안 본 문장) =====
 function startSession() {
   let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
@@ -261,6 +265,7 @@ function startSession() {
 function loadQuestion() {
   if (sIdx >= session.length) { renderSummary(); return; }
   const s = session[sIdx];
+  // 처음 보는 문장 → Scramble, 한 번이라도 시도 → Typing
   mode = s.stats.attempts === 0 ? 'scramble' : 'typing';
   attemptCount = 0; hintCount = getInitialHints(s); isAnswered = false; assembledOrder = [];
   if (mode === 'scramble') {
@@ -270,6 +275,7 @@ function loadQuestion() {
   render();
 }
 
+// 숙련도 기반 기본 힌트 개수 (첫시도 성공 0회→2 / 1회→1 / 2회+→0)
 function getInitialHints(s) {
   if (mode !== 'typing') return 0;
   const success = s.stats.first_try_success || 0;
@@ -344,7 +350,7 @@ function revealHint() {
   if (hintCount < s.chunks.length) { hintCount++; renderHints(); }
 }
 
-// ===== 타이핑 diff =====
+// ===== 타이핑 소극적 수정 diff =====
 function normalizeForCompare(t) {
   return t.toLowerCase().replace(/[’]/g, "'").replace(/[.,!?"“”]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -379,6 +385,7 @@ async function checkTyping() {
     const verdict = g.verdict || 'partial';
     const isPass = verdict === 'pass';
     logAttempt(s.id, isPass, attemptCount, userText);
+    // 첫 제출 + 힌트 전체 미사용일 때만 지표 집계
     if (attemptCount === 1 && !allHintsOpen) sessionResults.push({ counted: true, first_pass: isPass });
     else if (attemptCount === 1 && allHintsOpen) sessionResults.push({ counted: false, first_pass: false });
     renderGrade(g, s, userText);
@@ -434,6 +441,7 @@ function clearAssembled() {
   if (isAnswered) return;
   chunks.forEach(c => c.selected = false); assembledOrder = []; render();
 }
+// LCS 기반 위치 정오 판정 (한 칸 밀림에 강함)
 function markScrambleCorrectness(userArr, answerArr) {
   const n = userArr.length, m = answerArr.length;
   const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
@@ -506,7 +514,6 @@ function renderCollectButton(s) {
   if (!area) return;
   area.innerHTML = `<button class="mini" onclick="openCollectBox('${s.id}')">+ 표현 수집</button>`;
 }
-
 function openCollectBox(sentenceId) {
   const area = document.getElementById('collect-area');
   area.innerHTML = `
@@ -531,7 +538,6 @@ function openCollectBox(sentenceId) {
     document.getElementById('collectType').value = wc <= 1 ? 'word' : (wc <= 4 ? 'phrase' : 'sentence');
   });
 }
-
 async function submitCollect(sentenceId) {
   const term = document.getElementById('collectTerm').value.trim();
   if (!term) { document.getElementById('collect-status').textContent = '표현을 입력하세요'; return; }
@@ -560,7 +566,12 @@ async function submitCollect(sentenceId) {
           <span style="color:#666;">AI 기준 뜻 · ${data.meaning_ai}</span>
         </div>`;
       }
-      area.innerHTML = `<div class="collect-done">수집 완료 · <b>${term}</b> — ${mine || data.meaning_ai}</div>${warn}`;
+      area.innerHTML = `
+        <div class="collect-done">수집 완료 · <b>${escapeAttr(term)}</b> — ${escapeHtml(mine || data.meaning_ai)}</div>
+        ${warn}
+        <div id="meaning-edit-slot" style="margin-top:8px;">
+          <button class="mini" onclick="openMeaningEditor('meaning-edit-slot', '${escapeAttr(data.id)}', '${escapeAttr(data.meaning_ai || '')}', '${escapeAttr(mine || '')}', true)">뜻 수정</button>
+        </div>`;
     } else {
       status.textContent = '저장 실패: ' + (data.error || '');
       btn.disabled = false;
@@ -568,6 +579,73 @@ async function submitCollect(sentenceId) {
   } catch (err) {
     status.textContent = '오류: ' + err.message;
     btn.disabled = false;
+  }
+}
+
+// ===== 뜻 수정 (수집함 목록 + 저장 직후 경고, 공용) =====
+// slotId: 편집 UI를 그릴 컨테이너 id
+// aiMeaning: 기본값으로 채울 AI 기준 뜻
+// currentMine: 현재 내 뜻 (있으면 우선 표시)
+// inline: true면 저장 후 완료 문구만, false면 목록의 '내 뜻' 줄도 갱신
+function openMeaningEditor(slotId, id, aiMeaning, currentMine, inline) {
+  const slot = document.getElementById(slotId);
+  if (!slot) return;
+  const initial = currentMine || aiMeaning; // 기본은 AI 뜻 채움, 이미 내 뜻 있으면 그걸 우선
+  slot.innerHTML = `
+    <div class="collect-box">
+      <div class="cb-label">뜻 수정 · 내 뜻으로 저장</div>
+      <input type="text" id="edit-input-${escapeAttr(id)}" value="${escapeAttr(initial)}" autocomplete="off">
+      <div class="cb-row">
+        <button class="mini" onclick="fillAiMeaning('${escapeAttr(id)}', '${escapeAttr(aiMeaning)}')">AI 뜻 채우기</button>
+        <button class="action" onclick="saveMeaningEdit('${slotId}', '${escapeAttr(id)}', ${inline})" id="edit-save-${escapeAttr(id)}">저장</button>
+        <button class="mini" onclick="cancelMeaningEdit('${slotId}', '${escapeAttr(id)}', '${escapeAttr(aiMeaning)}', '${escapeAttr(currentMine)}', ${inline})">취소</button>
+        <span id="edit-status-${escapeAttr(id)}" class="spinner-text"></span>
+      </div>
+    </div>`;
+  const input = document.getElementById(`edit-input-${id}`);
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveMeaningEdit(slotId, id, inline); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelMeaningEdit(slotId, id, aiMeaning, currentMine, inline); }
+  });
+}
+function fillAiMeaning(id, aiMeaning) {
+  const input = document.getElementById(`edit-input-${id}`);
+  if (input) { input.value = aiMeaning; input.focus(); }
+}
+function cancelMeaningEdit(slotId, id, aiMeaning, currentMine, inline) {
+  const slot = document.getElementById(slotId);
+  if (slot) slot.innerHTML = `<button class="mini" onclick="openMeaningEditor('${slotId}', '${escapeAttr(id)}', '${escapeAttr(aiMeaning)}', '${escapeAttr(currentMine)}', ${inline})">뜻 수정</button>`;
+}
+async function saveMeaningEdit(slotId, id, inline) {
+  const input = document.getElementById(`edit-input-${id}`);
+  const newMine = input.value.trim();
+  const saveBtn = document.getElementById(`edit-save-${id}`);
+  const status = document.getElementById(`edit-status-${id}`);
+  saveBtn.disabled = true;
+  status.textContent = '저장 중...';
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateCollectionMeaning', id, meaning_mine: newMine })
+    });
+    const data = await res.json();
+    const slot = document.getElementById(slotId);
+    if (data.success) {
+      // 목록 화면이면 해당 항목의 '내 뜻' 줄도 즉시 갱신
+      const mineLine = document.getElementById(`mine-${id}`);
+      if (mineLine) {
+        mineLine.innerHTML = newMine ? '내 뜻 · ' + escapeHtml(newMine) : '<span style="color:#bbb;">내 뜻 · (없음)</span>';
+      }
+      if (slot) slot.innerHTML = `<div class="collect-done">수정 완료 · ${newMine ? escapeHtml(newMine) : '(내 뜻 비움)'}</div>`;
+    } else {
+      status.textContent = '저장 실패: ' + (data.error || '');
+      saveBtn.disabled = false;
+    }
+  } catch (err) {
+    status.textContent = '오류: ' + err.message;
+    saveBtn.disabled = false;
   }
 }
 
@@ -586,13 +664,19 @@ async function openCollection() {
         <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
       return;
     }
-    const list = items.map(it => `
+    const list = items.map(it => {
+      const slotId = `meaning-edit-${escapeAttr(it.id)}`;
+      return `
       <div class="coll-item">
-        <div><span class="coll-term">${it.term}</span><span class="coll-type">${it.type}</span></div>
-        ${it.meaning_mine ? `<div class="coll-meaning">내 뜻 · ${it.meaning_mine}</div>` : ''}
-        <div class="coll-ai">AI 기준 뜻 · ${it.meaning_ai || '-'}</div>
-        ${it.usage ? `<div class="coll-usage">용례 · ${it.usage}</div>` : ''}
-      </div>`).join('');
+        <div><span class="coll-term">${escapeHtml(it.term)}</span><span class="coll-type">${escapeHtml(it.type)}</span></div>
+        <div class="coll-meaning" id="mine-${escapeAttr(it.id)}">${it.meaning_mine ? '내 뜻 · ' + escapeHtml(it.meaning_mine) : '<span style="color:#bbb;">내 뜻 · (없음)</span>'}</div>
+        <div class="coll-ai">AI 기준 뜻 · ${escapeHtml(it.meaning_ai) || '-'}</div>
+        ${it.usage ? `<div class="coll-usage">용례 · ${escapeHtml(it.usage)}</div>` : ''}
+        <div id="${slotId}" style="margin-top:8px;">
+          <button class="mini" onclick="openMeaningEditor('${slotId}', '${escapeAttr(it.id)}', '${escapeAttr(it.meaning_ai || '')}', '${escapeAttr(it.meaning_mine || '')}', false)">뜻 수정</button>
+        </div>
+      </div>`;
+    }).join('');
     document.getElementById('app').innerHTML = `
       <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
         <div style="font-size:14px; color:#666;">수집한 표현 ${items.length}개</div>
@@ -604,7 +688,7 @@ async function openCollection() {
   }
 }
 
-// ===== 수집 퀴즈 =====
+// ===== 수집 퀴즈 (뜻→표현 4지선다, 정답률 낮은 것 우선) =====
 async function startQuiz() {
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
@@ -681,7 +765,7 @@ async function updateQuizStat(id, correct) {
   } catch (err) { console.error('퀴즈 통계 실패:', err); }
 }
 
-// ===== 패턴 노트 (이미 있으면 호출 생략) =====
+// ===== 패턴 노트 (로컬에 이미 있으면 서버 호출 생략) =====
 async function fetchPatternNote(sentenceId) {
   const el = document.getElementById('pattern-area');
   if (!el) return;
@@ -753,6 +837,18 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===== 유틸 =====
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+// onclick 인라인 핸들러의 작은따옴표 문자열 안에 안전하게 넣기 위한 이스케이프
+function escapeAttr(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;').replace(/\r?\n/g, ' ')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
