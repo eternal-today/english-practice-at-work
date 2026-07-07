@@ -688,7 +688,10 @@ async function openCollection() {
   }
 }
 
-// ===== 수집 퀴즈 (뜻→표현 4지선다, 정답률 낮은 것 우선) =====
+// ===== 수집 퀴즈 (양방향 · 숙련도 배분) =====
+// 정답률 60% 미만/미풀이 → 표현→뜻(재인, recog), 60% 이상 → 뜻→표현(인출, recall)
+// B안: 재인 그룹을 앞(정답률 낮은 순), 인출 그룹을 뒤로 배치해 화면 방향이 튀지 않게 함
+const RECOG_THRESHOLD = 0.6; // 이 미만이면 재인(표현→뜻)으로 출제
 async function startQuiz() {
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
@@ -703,12 +706,18 @@ async function startQuiz() {
         <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
       return;
     }
-    items.sort((a, b) => {
-      const ra = Number(a.quiz_count) ? Number(a.correct_count) / Number(a.quiz_count) : 0;
-      const rb = Number(b.quiz_count) ? Number(b.correct_count) / Number(b.quiz_count) : 0;
-      return ra - rb;
+    // 각 항목에 정답률(_rate)과 출제 방향(_dir) 부여
+    items.forEach(it => {
+      const q = Number(it.quiz_count) || 0;
+      it._rate = q ? (Number(it.correct_count) || 0) / q : 0; // 미풀이는 0 → 재인行
+      it._dir = it._rate < RECOG_THRESHOLD ? 'recog' : 'recall';
     });
-    quizItems = shuffle(items.slice(0, Math.min(10, items.length)));
+    // 재인(recog) 먼저 · 그 안에서 정답률 낮은 순 → 인출(recall) 뒤로
+    items.sort((a, b) => {
+      if (a._dir !== b._dir) return a._dir === 'recog' ? -1 : 1;
+      return a._rate - b._rate;
+    });
+    quizItems = items.slice(0, Math.min(10, items.length));
     qIdx = 0; quizScore = 0;
     renderQuizQuestion();
   } catch (err) {
@@ -719,30 +728,36 @@ function meaningOf(it) { return it.meaning_mine || it.meaning_ai; }
 function renderQuizQuestion() {
   if (qIdx >= quizItems.length) { renderQuizSummary(); return; }
   const cur = quizItems[qIdx];
-  const others = shuffle(quizItems.filter(it => it.id !== cur.id)).slice(0, 3).map(it => it.term);
-  const options = shuffle([cur.term, ...others]);
+  const isRecog = cur._dir === 'recog'; // true=표현→뜻, false=뜻→표현
+  const distractors = shuffle(quizItems.filter(it => it.id !== cur.id)).slice(0, 3);
+  const options = shuffle([cur, ...distractors]);
+  const prompt = isRecog ? cur.term : meaningOf(cur);
+  const subLabel = isRecog ? '이 표현의 뜻은?' : '이 뜻에 해당하는 표현은?';
+  const optLabel = it => isRecog ? meaningOf(it) : it.term;
   document.getElementById('progress').textContent = `${qIdx + 1} / ${quizItems.length}`;
   document.getElementById('app').innerHTML = `
     <div class="quiz-card">
-      <div class="quiz-sub">이 뜻에 해당하는 표현은?</div>
-      <div class="quiz-q">${meaningOf(cur)}</div>
+      <div class="quiz-sub">${subLabel}</div>
+      <div class="quiz-q">${escapeHtml(prompt)}</div>
       <div class="controls" style="flex-direction:column; align-items:stretch;">
-        ${options.map(opt => `<button class="action secondary" style="margin-bottom:8px;" onclick="answerQuiz('${encodeURIComponent(opt)}')">${opt}</button>`).join('')}
+        ${options.map(it => `<button class="action secondary" style="margin-bottom:8px;" onclick="answerQuiz('${escapeAttr(it.id)}')">${escapeHtml(optLabel(it))}</button>`).join('')}
       </div>
       <div id="quiz-feedback"></div>
     </div>`;
 }
-async function answerQuiz(encoded) {
-  const chosen = decodeURIComponent(encoded);
+async function answerQuiz(chosenId) {
   const cur = quizItems[qIdx];
-  const correct = chosen === cur.term;
+  const isRecog = cur._dir === 'recog';
+  const correct = chosenId === cur.id;
   if (correct) quizScore++;
   updateQuizStat(cur.id, correct);
+  // 정답으로 보여줄 텍스트: 재인이면 뜻, 인출이면 표현
+  const answerText = isRecog ? meaningOf(cur) : cur.term;
   const fb = document.getElementById('quiz-feedback');
   fb.innerHTML = correct
-    ? `<div class="feedback correct">정답! <b>${cur.term}</b></div><button class="action" onclick="nextQuiz()">다음</button>`
-    : `<div class="feedback incorrect">정답은 <b>${cur.term}</b> 입니다.
-       ${cur.usage ? `<div style="margin-top:6px; font-size:13px; color:#777;">용례 · ${cur.usage}</div>` : ''}</div>
+    ? `<div class="feedback correct">정답! <b>${escapeHtml(answerText)}</b></div><button class="action" onclick="nextQuiz()">다음</button>`
+    : `<div class="feedback incorrect">정답은 <b>${escapeHtml(answerText)}</b> 입니다.
+       ${cur.usage ? `<div style="margin-top:6px; font-size:13px; color:#777;">용례 · ${escapeHtml(cur.usage)}</div>` : ''}</div>
        <button class="action" onclick="nextQuiz()">다음</button>`;
   document.querySelectorAll('.quiz-card .action.secondary').forEach(b => b.disabled = true);
 }
