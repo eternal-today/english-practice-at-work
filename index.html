@@ -409,7 +409,7 @@ async function checkTyping() {
     const g = await res.json();
     const verdict = g.verdict || 'partial';
     const isPass = verdict === 'pass';
-    logAttempt(s.id, isPass, attemptCount, userText);
+    logAttempt(s.id, isPass, attemptCount, userText, 'typing');
     // 첫 제출 + 힌트 전체 미사용일 때만 지표 집계
     if (attemptCount === 1 && !allHintsOpen) sessionResults.push({ counted: true, first_pass: isPass });
     else if (attemptCount === 1 && allHintsOpen) sessionResults.push({ counted: false, first_pass: false });
@@ -567,7 +567,7 @@ function checkScramble() {
   const answerArr = s.chunks;
   const userText = userArr.join(' ');
   const isCorrect = userText === answerArr.join(' ');
-  logAttempt(s.id, isCorrect, attemptCount, userText);
+  logAttempt(s.id, isCorrect, attemptCount, userText, 'scramble');
   const fb = document.getElementById('feedback-area');
   if (isCorrect) {
     isAnswered = true;
@@ -946,6 +946,28 @@ function nextQuestion() {
 }
 
 // ===== 세션 요약 =====
+// 작문 기준 추정 등급(로컬 계산) + 타이핑 20개 도달 시 자동 심층 진단(LLM)
+function estimateLocalLevel() {
+  // 근거: 누적 첫시도 통과율 + 다뤄본 문장 평균 복잡도(청크 수)
+  let attempted = 0, first = 0, chunkSum = 0, chunkN = 0;
+  allSentences.forEach(s => {
+    if (s.stats.attempts > 0) {
+      attempted++;
+      if (s.stats.first_try_success > 0) first++;
+      chunkSum += s.chunks.length; chunkN++;
+    }
+  });
+  const passRate = attempted > 0 ? first / attempted : 0;
+  const avgChunks = chunkN > 0 ? chunkSum / chunkN : 0;
+  // 거친 구간 추정 (정확한 값 아님)
+  let level = 'IM';
+  if (passRate >= 0.8 && avgChunks >= 6) level = 'AL';
+  else if (passRate >= 0.65) level = 'IH';
+  else if (passRate >= 0.4) level = 'IM';
+  else level = 'IL';
+  return { level, passRate: Math.round(passRate * 100), avgChunks: avgChunks.toFixed(1), attempted };
+}
+
 function renderSummary() {
   const counted = sessionResults.filter(r => r.counted);
   const passed = counted.filter(r => r.first_pass).length;
@@ -953,6 +975,7 @@ function renderSummary() {
   let cumAttempted = 0, cumFirst = 0;
   allSentences.forEach(s => { if (s.stats.attempts > 0) { cumAttempted++; if (s.stats.first_try_success > 0) cumFirst++; } });
   const cumRate = cumAttempted > 0 ? Math.round(cumFirst / cumAttempted * 100) : 0;
+  const lv = estimateLocalLevel();
   document.getElementById('progress').textContent = '';
   document.getElementById('hintbar').textContent = '';
   document.getElementById('app').innerHTML = `
@@ -960,16 +983,58 @@ function renderSummary() {
       <h2>세션 완료</h2>
       <div class="big-number">${rate}%</div>
       <div class="sub-metric">이번 세션 첫시도 통과율 (${passed}/${counted.length}, 힌트 전체 사용 제외) · 누적 ${cumRate}%</div>
+      <div style="margin:18px 0; padding:14px 16px; background:#f7f7f2; border:1px solid #e0e0d0; border-radius:6px;">
+        <div style="font-size:11px; color:#999; font-weight:600; letter-spacing:0.5px; margin-bottom:4px;">작문 기준 추정 등급</div>
+        <div style="font-size:22px; font-weight:700; color:#55552a;">${lv.level} 근처</div>
+        <div style="font-size:12px; color:#999; margin-top:4px;">누적 첫시도 통과율 ${lv.passRate}% · 평균 복잡도 ${lv.avgChunks}청크 · 실제 스피킹과 다를 수 있음</div>
+      </div>
+      <div id="diagnose-area" style="margin-bottom:16px;"></div>
       <button class="action" onclick="renderStart()">새 세션 시작</button>
     </div>`;
+  runDiagnoseIfReady();
+}
+
+// 세션 끝 자동 진단: 서버가 20개 구간 도달 판정. 미달이면 Gemini 호출 없음.
+async function runDiagnoseIfReady() {
+  const area = document.getElementById('diagnose-area');
+  if (!area) return;
+  area.innerHTML = `<div class="spinner-text" style="font-size:12px;">학습 진단 확인 중...</div>`;
+  try {
+    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'diagnose' }) });
+    const data = await res.json();
+    if (data.ready && data.diagnosis) {
+      const d = data.diagnosis;
+      const imps = (d.improvements || []).map(x => `<li style="margin-bottom:3px;">${escapeHtml(x)}</li>`).join('');
+      area.innerHTML = `
+        <div style="text-align:left; padding:16px; background:#fff; border:1px solid #d8e2ea; border-radius:8px;">
+          <div style="font-size:11px; color:#6a8090; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">
+            심층 진단 · 최근 타이핑 ${data.range ? data.range[0] + '~' + data.range[1] : ''}번째 작문 기준
+          </div>
+          <div style="font-size:18px; font-weight:700; color:#1a5a3a; margin-bottom:2px;">${escapeHtml(d.level)} <span style="font-size:12px; font-weight:400; color:#999;">(작문 기준 추정)</span></div>
+          <div style="font-size:13px; color:#555; margin-bottom:10px;">${escapeHtml(d.level_reason || '')}</div>
+          <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">잘하는 점</div>
+          <div style="font-size:13px; color:#2a5a2a; margin-bottom:10px;">${escapeHtml(d.strengths || '')}</div>
+          <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">보완점</div>
+          <ul style="font-size:13px; color:#8a5a1a; margin:0 0 10px 18px; padding:0;">${imps}</ul>
+          <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">다음 집중 방향</div>
+          <div style="font-size:13px; color:#1a5a3a;">${escapeHtml(d.next_focus || '')}</div>
+        </div>`;
+    } else if (data.until_next != null && data.until_next > 0) {
+      area.innerHTML = `<div style="font-size:12px; color:#bbb;">다음 심층 진단까지 타이핑 ${data.until_next}개 남음</div>`;
+    } else {
+      area.innerHTML = '';
+    }
+  } catch (err) {
+    area.innerHTML = `<div style="font-size:12px; color:#bbb;">진단 확인 실패 (건너뜀)</div>`;
+  }
 }
 
 // ===== 로그 =====
-async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput) {
+async function logAttempt(sentenceId, isCorrect, attemptNumber, userInput, mode) {
   try {
     await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'logAttempt', sentence_id: sentenceId, is_correct: isCorrect, attempt_number: attemptNumber, user_input: userInput })
+      body: JSON.stringify({ action: 'logAttempt', sentence_id: sentenceId, is_correct: isCorrect, attempt_number: attemptNumber, user_input: userInput, mode: mode || '' })
     });
   } catch (err) { console.error('로그 실패:', err); }
 }
