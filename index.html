@@ -243,15 +243,40 @@ function renderStart() {
 }
 function setCount(n) { selCount = n; renderStart(); }
 
-// ===== 세션 구성 (틀린 문장 우선 → 안 본 문장 → 오래 안 본 문장) =====
+// ===== 세션 구성 =====
+// 틀린 문장(최우선) → 남은 자리를 복습 40%(올림) : 안 푼 60%로 배분
+// 한쪽이 모자라면 다른 쪽으로 자동 보충해 자리를 낭비하지 않음
+// 복습 우선순위: 오래 안 본 것 먼저(last_seen 오름차순)
 function startSession() {
   let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
-  const wrong = pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct);
+  const wrong = shuffle(pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct));
   const unseen = shuffle(pool.filter(s => s.stats.attempts === 0));
-  const seen = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
+  const review = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
     .sort((a, b) => String(a.stats.last_seen).localeCompare(String(b.stats.last_seen)));
-  session = [...shuffle(wrong), ...unseen, ...seen].slice(0, selCount);
+
+  // 1) 틀린 문장 먼저 채움
+  const picked = wrong.slice(0, selCount);
+  let remaining = selCount - picked.length;
+
+  // 2) 남은 자리를 복습 40% : 안 푼 60%로 배분
+  let reviewQuota = Math.ceil(remaining * 0.4);
+  let unseenQuota = remaining - reviewQuota;
+
+  // 3) 한쪽이 부족하면 다른 쪽으로 보충 (자리 낭비 방지)
+  const reviewTake = Math.min(reviewQuota, review.length);
+  const unseenTake = Math.min(unseenQuota, unseen.length);
+  let shortfall = remaining - reviewTake - unseenTake;
+  const reviewExtra = Math.min(shortfall, review.length - reviewTake);
+  shortfall -= reviewExtra;
+  const unseenExtra = Math.min(shortfall, unseen.length - unseenTake);
+
+  const reviewPick = review.slice(0, reviewTake + reviewExtra);
+  const unseenPick = unseen.slice(0, unseenTake + unseenExtra);
+
+  // 4) 최종 배치: 틀린 것 → 복습 → 안 푼 것 (복습이 뒤로 밀려 잘리지 않도록)
+  session = [...picked, ...reviewPick, ...unseenPick];
+
   if (session.length === 0) {
     document.getElementById('app').innerHTML =
       `<div class="feedback incorrect">해당 조건의 문장이 없습니다.</div>
