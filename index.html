@@ -443,6 +443,22 @@ function renderGrade(g, s, userText) {
         <div class="text">${minorResult.html}</div></div>`;
     }
   }
+
+  // 따라 쓰기(가리고 재현)용 문장 저장 · retry가 아니고 문장이 있을 때만 진입 버튼 노출
+  _shadowTexts = { minor: (verdict !== 'retry' && g.minor) ? g.minor : '', native: (verdict !== 'retry' && g.native) ? g.native : '' };
+  let shadowEntry = '';
+  if (_shadowTexts.minor || _shadowTexts.native) {
+    const btns = [];
+    if (_shadowTexts.minor) btns.push(`<button class="mini" onclick="startShadow('minor')">소극적 따라 쓰기</button>`);
+    if (_shadowTexts.native) btns.push(`<button class="mini" onclick="startShadow('native')">적극적 따라 쓰기</button>`);
+    shadowEntry = `
+      <div class="grade-comment" style="border-top:1px solid #f0f0f0;">
+        <div style="font-size:11px; color:#999; font-weight:600; letter-spacing:0.5px; margin-bottom:6px;">따라 쓰기 · 안 보고 재현 연습 (기록 안 됨)</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">${btns.join('')}</div>
+        <div id="shadow-area" style="margin-top:10px;"></div>
+      </div>`;
+  }
+
   fb.innerHTML = `
     <div class="grade ${verdict}">
       <div class="grade-head"><span class="verdict-tag">${labelMap[verdict]}</span>${verdict === 'retry' ? '의미를 다시 확인해보세요' : ''}</div>
@@ -450,8 +466,63 @@ function renderGrade(g, s, userText) {
         ${minorRow}
         ${(verdict !== 'retry' && g.native) ? `<div class="grade-row native"><div class="label">적극적 수정 · 네이티브 AL</div><div class="text">${g.native}</div></div>` : ''}
         ${g.comment ? `<div class="grade-comment">${g.comment}</div>` : ''}
+        ${shadowEntry}
       </div>
     </div>`;
+}
+
+// ===== 따라 쓰기 (가리고 재현) · LLM/서버 호출 없음, 통계 미반영 =====
+let _shadowTexts = { minor: '', native: '' };
+function startShadow(kind) {
+  const target = _shadowTexts[kind];
+  const area = document.getElementById('shadow-area');
+  if (!target || !area) return;
+  const label = kind === 'minor' ? '소극적 · 문법만' : '적극적 · 네이티브 AL';
+  // 1단계: 문장을 잠깐 보여주고, 준비되면 스스로 가리기
+  area.innerHTML = `
+    <div class="collect-box" style="background:#f7f9fb; border-color:#d8e2ea;">
+      <div class="cb-label">${label} · 눈에 담고 준비되면 가리세요</div>
+      <div style="font-size:15px; color:#1a5a3a; padding:8px 0;">${escapeHtml(target)}</div>
+      <button class="action" onclick="hideAndType('${kind}')">가리고 입력 시작</button>
+    </div>`;
+}
+function hideAndType(kind) {
+  const area = document.getElementById('shadow-area');
+  const label = kind === 'minor' ? '소극적 · 문법만' : '적극적 · 네이티브 AL';
+  area.innerHTML = `
+    <div class="collect-box" style="background:#f7f9fb; border-color:#d8e2ea;">
+      <div class="cb-label">${label} · 기억으로 재현해 보세요</div>
+      <input type="text" id="shadowInput" placeholder="방금 본 문장을 안 보고 입력" autocomplete="off">
+      <div class="cb-row">
+        <button class="action" onclick="checkShadow('${kind}')" id="shadowCheckBtn">확인 (Enter)</button>
+        <button class="mini" onclick="startShadow('${kind}')">다시 보기</button>
+        <span id="shadow-status" class="spinner-text"></span>
+      </div>
+      <div id="shadow-result" style="margin-top:8px;"></div>
+    </div>`;
+  const input = document.getElementById('shadowInput');
+  input.focus();
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); checkShadow(kind); }
+  });
+}
+function checkShadow(kind) {
+  const input = document.getElementById('shadowInput');
+  const target = _shadowTexts[kind];
+  const typed = input.value.trim();
+  if (!typed) return;
+  const result = document.getElementById('shadow-result');
+  const cmp = renderMinorText(typed, target); // target 기준으로 typed의 어긋난 단어 표시
+  if (cmp.same) {
+    result.innerHTML = `<div class="feedback correct" style="margin-bottom:0;">정확히 재현했습니다 · 완벽해요</div>`;
+  } else {
+    result.innerHTML = `
+      <div class="feedback incorrect" style="margin-bottom:0;">
+        <div style="font-size:12px; color:#999; margin-bottom:4px;">밑줄 · 원문과 다른 부분</div>
+        <div class="answer" style="font-weight:400;">${cmp.html}</div>
+        <div style="margin-top:8px;"><button class="mini" onclick="hideAndType('${kind}')">다시 도전</button></div>
+      </div>`;
+  }
 }
 
 // ===== Scramble =====
