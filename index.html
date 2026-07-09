@@ -269,6 +269,9 @@ function renderStart() {
         <button class="action secondary" onclick="openCollection()">수집함 보기</button>
         <button class="action secondary" onclick="startQuiz()">수집 퀴즈</button>
       </div>
+      <div class="nav-row">
+        <button class="action secondary" onclick="openDiagnoses()">학습 진단 기록</button>
+      </div>
     </div>`;
 }
 function setCount(n) { selCount = n; renderStart(); }
@@ -847,6 +850,75 @@ async function doDelete(id) {
     if (status) status.textContent = '오류: ' + err.message;
     if (btn) { btn.disabled = false; btn.textContent = '삭제'; btn.style.fontWeight = ''; }
   }
+}
+
+// ===== 학습 진단 기록 (히스토리 + 오답노트) =====
+let _diagItems = [];
+async function openDiagnoses(tab) {
+  document.getElementById('progress').textContent = '';
+  document.getElementById('hintbar').textContent = '';
+  const view = tab || 'history';
+  document.getElementById('app').innerHTML = `<div class="loading">진단 기록 불러오는 중...</div>`;
+  try {
+    if (_diagItems.length === 0 || tab === undefined) {
+      const res = await fetch(`${GAS_URL}?action=getDiagnoses`);
+      const data = await res.json();
+      _diagItems = data.items || [];
+    }
+  } catch (err) {
+    document.getElementById('app').innerHTML = `<div class="feedback incorrect">진단 기록을 불러오지 못했습니다: ${escapeHtml(err.message)}</div>
+      <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
+    return;
+  }
+  if (_diagItems.length === 0) {
+    document.getElementById('app').innerHTML = `
+      <div class="empty-note">아직 저장된 진단이 없습니다.<br>타이핑 20개가 쌓이면 세션 종료 시 자동으로 진단이 생성·저장됩니다.</div>
+      <button class="action secondary" onclick="renderStart()">돌아가기</button>`;
+    return;
+  }
+  const tabBtns = `
+    <div class="nav-row" style="margin-bottom:16px;">
+      <button class="action ${view === 'history' ? '' : 'secondary'}" onclick="openDiagnoses('history')">진단 히스토리</button>
+      <button class="action ${view === 'notes' ? '' : 'secondary'}" onclick="openDiagnoses('notes')">오답노트</button>
+    </div>`;
+  let body = '';
+  if (view === 'history') {
+    body = _diagItems.map(d => {
+      const imps = (d.improvements || []).map(x => `<li style="margin-bottom:3px;">${escapeHtml(x)}</li>`).join('');
+      return `
+        <div style="text-align:left; padding:14px 16px; background:#fff; border:1px solid #e5e5e5; border-radius:8px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+            <span style="font-size:16px; font-weight:700; color:#1a5a3a;">${escapeHtml(d.level)}</span>
+            <span style="font-size:11px; color:#aaa;">${escapeHtml(String(d.created_at))} · ${d.range_start}~${d.range_end}번째</span>
+          </div>
+          <div style="font-size:13px; color:#555; margin-bottom:8px;">${escapeHtml(d.level_reason || '')}</div>
+          ${d.strengths ? `<div style="font-size:12px; color:#999; font-weight:600;">잘하는 점</div><div style="font-size:13px; color:#2a5a2a; margin-bottom:6px;">${escapeHtml(d.strengths)}</div>` : ''}
+          ${imps ? `<div style="font-size:12px; color:#999; font-weight:600;">보완점</div><ul style="font-size:13px; color:#8a5a1a; margin:0 0 6px 18px; padding:0;">${imps}</ul>` : ''}
+          ${d.next_focus ? `<div style="font-size:12px; color:#999; font-weight:600;">다음 집중 방향</div><div style="font-size:13px; color:#1a5a3a;">${escapeHtml(d.next_focus)}</div>` : ''}
+        </div>`;
+    }).join('');
+  } else {
+    // 오답노트: 모든 진단의 보완점만 모아서 (최신순, 구간 라벨과 함께)
+    const blocks = _diagItems.map(d => {
+      const imps = (d.improvements || []).map(x => `<li style="margin-bottom:4px;">${escapeHtml(x)}</li>`).join('');
+      if (!imps) return '';
+      return `
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px; color:#aaa; margin-bottom:3px;">${escapeHtml(String(d.created_at))} · ${d.range_start}~${d.range_end}번째 · ${escapeHtml(d.level)}</div>
+          <ul style="font-size:13px; color:#8a5a1a; margin:0 0 0 18px; padding:0;">${imps}</ul>
+        </div>`;
+    }).filter(Boolean).join('');
+    body = `<div style="text-align:left; padding:16px; background:#fff; border:1px solid #e5e5e5; border-radius:8px;">
+      <div style="font-size:12px; color:#999; margin-bottom:10px;">지금까지 진단에서 나온 보완점 모음 (최신순)</div>
+      ${blocks || '<div style="color:#bbb;">보완점 기록이 없습니다.</div>'}
+    </div>`;
+  }
+  document.getElementById('app').innerHTML = `
+    <div style="max-width:100%;">
+      ${tabBtns}
+      ${body}
+      <button class="action secondary" onclick="renderStart()" style="margin-top:8px;">돌아가기</button>
+    </div>`;
 }
 
 // ===== 수집함 =====
