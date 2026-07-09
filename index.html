@@ -536,17 +536,7 @@ function startShadow(kind) {
   const area = document.getElementById('shadow-area');
   if (!target || !area) return;
   const label = shadowLabel(kind);
-  // 1단계: 문장을 잠깐 보여주고, 준비되면 스스로 가리기
-  area.innerHTML = `
-    <div class="collect-box" style="background:#f7f9fb; border-color:#d8e2ea;">
-      <div class="cb-label">${label} · 눈에 담고 준비되면 가리세요</div>
-      <div style="font-size:15px; color:#1a5a3a; padding:8px 0;">${escapeHtml(target)}</div>
-      <button class="action" onclick="hideAndType('${kind}')">가리고 입력 시작</button>
-    </div>`;
-}
-function hideAndType(kind) {
-  const area = document.getElementById('shadow-area');
-  const label = shadowLabel(kind);
+  // 모범문은 위 채점 결과에 이미 보이므로, 보여주는 단계 없이 바로 한국어 + 입력창
   const kr = (session[sIdx] && session[sIdx].korean_text) ? session[sIdx].korean_text : '';
   const krLine = kr
     ? `<div style="font-size:14px; color:#555; padding:6px 10px; background:#fff; border:1px solid #e5e5e5; border-radius:4px; margin-bottom:8px;">${escapeHtml(kr)}</div>`
@@ -555,10 +545,9 @@ function hideAndType(kind) {
     <div class="collect-box" style="background:#f7f9fb; border-color:#d8e2ea;">
       <div class="cb-label">${label} · 한국어를 보고 기억으로 재현해 보세요</div>
       ${krLine}
-      <input type="text" id="shadowInput" placeholder="방금 본 문장을 안 보고 입력" autocomplete="off">
+      <input type="text" id="shadowInput" placeholder="안 보고 영어로 재현" autocomplete="off">
       <div class="cb-row">
         <button class="action" onclick="checkShadow('${kind}')" id="shadowCheckBtn">확인 (Enter)</button>
-        <button class="mini" onclick="startShadow('${kind}')">다시 보기</button>
         <span id="shadow-status" class="spinner-text"></span>
       </div>
       <div id="shadow-result" style="margin-top:8px;"></div>
@@ -583,7 +572,7 @@ function checkShadow(kind) {
       <div class="feedback incorrect" style="margin-bottom:0;">
         <div style="font-size:12px; color:#999; margin-bottom:4px;">밑줄 · 원문과 다른 부분</div>
         <div class="answer" style="font-weight:400;">${cmp.html}</div>
-        <div style="margin-top:8px;"><button class="mini" onclick="hideAndType('${kind}')">다시 도전</button></div>
+        <div style="margin-top:8px;"><button class="mini" onclick="startShadow('${kind}')">다시 도전</button></div>
       </div>`;
   }
 }
@@ -1121,16 +1110,20 @@ function renderSummary() {
         <div style="font-size:12px; color:#999; margin-top:4px;">누적 첫시도 통과율 ${lv.passRate}% · 평균 복잡도 ${lv.avgChunks}청크 · 실제 스피킹과 다를 수 있음</div>
       </div>
       <div id="diagnose-area" style="margin-bottom:16px;"></div>
-      <button class="action" onclick="renderStart()">새 세션 시작</button>
+      <button class="action" id="newSessionBtn" onclick="renderStart()">새 세션 시작</button>
     </div>`;
   runDiagnoseIfReady();
 }
 
 // 세션 끝 자동 진단: 서버가 20개 구간 도달 판정. 미달이면 Gemini 호출 없음.
+// 진단이 생성 중일 수 있으므로, 확인이 끝날 때까지 '새 세션' 버튼을 잠가 실수로 넘기는 것을 방지.
 async function runDiagnoseIfReady() {
   const area = document.getElementById('diagnose-area');
   if (!area) return;
-  area.innerHTML = `<div class="spinner-text" style="font-size:12px;">학습 진단 확인 중...</div>`;
+  const btn = document.getElementById('newSessionBtn');
+  // 확인/생성 동안 새 세션 잠금
+  if (btn) { btn.disabled = true; btn.dataset.locked = '1'; }
+  area.innerHTML = `<div class="spinner-text" style="font-size:13px; color:#6a8090; font-weight:600;">심층 진단을 확인하고 있습니다… 잠시만 기다려주세요 (진단이 있으면 생성에 약 10초)</div>`;
   try {
     const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'diagnose' }) });
     const data = await res.json();
@@ -1140,7 +1133,7 @@ async function runDiagnoseIfReady() {
       area.innerHTML = `
         <div style="text-align:left; padding:16px; background:#fff; border:1px solid #d8e2ea; border-radius:8px;">
           <div style="font-size:11px; color:#6a8090; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">
-            심층 진단 · 최근 타이핑 ${data.range ? data.range[0] + '~' + data.range[1] : ''}번째 작문 기준
+            ✦ 새 심층 진단 · 최근 타이핑 ${data.range ? data.range[0] + '~' + data.range[1] : ''}번째 작문 기준
           </div>
           <div style="font-size:18px; font-weight:700; color:#1a5a3a; margin-bottom:2px;">${escapeHtml(d.level)} <span style="font-size:12px; font-weight:400; color:#999;">(작문 기준 추정)</span></div>
           <div style="font-size:13px; color:#555; margin-bottom:10px;">${escapeHtml(d.level_reason || '')}</div>
@@ -1150,6 +1143,7 @@ async function runDiagnoseIfReady() {
           <ul style="font-size:13px; color:#8a5a1a; margin:0 0 10px 18px; padding:0;">${imps}</ul>
           <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">다음 집중 방향</div>
           <div style="font-size:13px; color:#1a5a3a;">${escapeHtml(d.next_focus || '')}</div>
+          <div style="font-size:11px; color:#bbb; margin-top:10px;">이 진단은 '학습 진단 기록'에 저장되었습니다.</div>
         </div>`;
     } else if (data.until_next != null && data.until_next > 0) {
       area.innerHTML = `<div style="font-size:12px; color:#bbb;">다음 심층 진단까지 타이핑 ${data.until_next}개 남음</div>`;
@@ -1158,6 +1152,9 @@ async function runDiagnoseIfReady() {
     }
   } catch (err) {
     area.innerHTML = `<div style="font-size:12px; color:#bbb;">진단 확인 실패 (건너뜀)</div>`;
+  } finally {
+    // 확인 완료 → 새 세션 버튼 복구
+    if (btn) { btn.disabled = false; delete btn.dataset.locked; }
   }
 }
 
