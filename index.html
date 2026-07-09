@@ -164,6 +164,32 @@
   .sub-metric { font-size: 13px; color: #888; margin-bottom: 28px; }
 
   .hint-bar { font-size: 12px; color: #999; text-align: center; margin-top: 16px; }
+  .lookup-input {
+    width: 130px; padding: 5px 10px; font-size: 12px; font-family: inherit;
+    border: 1px solid #e0e0e0; border-radius: 4px; background: #fff; color: #444; outline: none;
+    transition: width 0.15s ease;
+  }
+  .lookup-input:focus { border-color: #999; width: 180px; }
+  .lookup-input::placeholder { color: #bbb; }
+  .lookup-result-box {
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 6px;
+    padding: 12px 16px; margin-bottom: 16px; font-size: 14px;
+  }
+  .lookup-result-box .lr-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .lookup-result-box .lr-term { font-weight: 600; color: #1a1a1a; }
+  .lookup-result-box .lr-src {
+    font-size: 10px; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.3px;
+  }
+  .lookup-result-box .lr-src.coll { background: #eaf2f8; color: #3a6a8a; }
+  .lookup-result-box .lr-src.llm { background: #f0f0f0; color: #888; }
+  .lookup-result-box .lr-meaning { color: #333; }
+  .lookup-result-box .lr-mine { font-size: 11px; color: #6a8090; margin-left: 6px; }
+  .lookup-result-box .lr-usage { font-size: 12px; color: #7a7a5a; font-style: italic; margin-top: 3px; }
+  .lookup-result-box .lr-item { padding: 5px 0; border-top: 1px solid #f2f2f2; }
+  .lookup-result-box .lr-item:first-of-type { border-top: none; }
+  .lookup-result-box .lr-close { cursor: pointer; color: #bbb; font-size: 12px; border: none; background: none; }
   .loading { text-align: center; padding: 40px; color: #888; }
   .spinner-text { color: #999; font-size: 13px; }
   .empty-note { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
@@ -173,8 +199,12 @@
   <div class="container">
     <div class="header">
       <div class="title" onclick="goHome()">STEALTH AL</div>
-      <div class="progress" id="progress"></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <input type="text" id="lookupInput" class="lookup-input" placeholder="단어 뜻 찾기" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();doLookup();}">
+        <div class="progress" id="progress"></div>
+      </div>
     </div>
+    <div id="lookup-result"></div>
     <div id="app"><div class="loading">불러오는 중...</div></div>
     <div class="hint-bar" id="hintbar"></div>
   </div>
@@ -1067,6 +1097,50 @@ document.addEventListener('keydown', (e) => {
     else if (mode === 'scramble') checkScramble();
   } else if (key === 'n' && isAnswered) { nextQuestion(); }
 });
+
+// ===== 단어 뜻 찾기 (헤더 검색창) · 수집함 우선, 없으면 LLM =====
+async function doLookup() {
+  const input = document.getElementById('lookupInput');
+  const term = input.value.trim();
+  const box = document.getElementById('lookup-result');
+  if (!term) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="lookup-result-box"><span class="spinner-text">"${escapeHtml(term)}" 찾는 중...</span></div>`;
+  try {
+    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'lookupWord', term }) });
+    const data = await res.json();
+    if (data.error) { box.innerHTML = `<div class="lookup-result-box">${escapeHtml(data.error)}</div>`; return; }
+
+    let body = '';
+    if (data.source === 'collection' && data.matches && data.matches.length) {
+      body = data.matches.map(m => `
+        <div class="lr-item">
+          <div><span class="lr-term">${escapeHtml(m.term)}</span>${m.is_mine ? '<span class="lr-mine">내 뜻</span>' : '<span class="lr-mine">AI 뜻</span>'}</div>
+          <div class="lr-meaning">${escapeHtml(m.meaning) || '<span style="color:#bbb;">(뜻 없음)</span>'}</div>
+          ${m.usage ? `<div class="lr-usage">용례 · ${escapeHtml(m.usage)}</div>` : ''}
+        </div>`).join('');
+      body = `
+        <div class="lr-head">
+          <span class="lr-src coll">수집함</span>
+          <button class="lr-close" onclick="closeLookup()">닫기 ✕</button>
+        </div>${body}`;
+    } else {
+      body = `
+        <div class="lr-head">
+          <span class="lr-term">${escapeHtml(data.term)}</span>
+          <div><span class="lr-src llm">AI</span> <button class="lr-close" onclick="closeLookup()" style="margin-left:6px;">닫기 ✕</button></div>
+        </div>
+        <div class="lr-meaning">${escapeHtml(data.meaning || '')}</div>`;
+    }
+    box.innerHTML = `<div class="lookup-result-box">${body}</div>`;
+  } catch (err) {
+    box.innerHTML = `<div class="lookup-result-box">검색 오류: ${escapeHtml(err.message)}</div>`;
+  }
+}
+function closeLookup() {
+  document.getElementById('lookup-result').innerHTML = '';
+  const input = document.getElementById('lookupInput');
+  if (input) input.value = '';
+}
 
 // ===== 유틸 =====
 function escapeHtml(s) {
