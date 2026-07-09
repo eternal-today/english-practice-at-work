@@ -275,9 +275,9 @@ function setCount(n) { selCount = n; renderStart(); }
 
 // ===== 세션 구성 =====
 // 세션 시작 시 최신 데이터를 다시 불러온다 (직전 세션 결과를 반영해 같은 문장 반복 방지)
-// 틀린 문장(최우선) → 남은 자리를 복습 40%(올림) : 안 푼 60%로 배분
+// 틀린 문장(최우선) → 남은 자리를 복습 80% : 안 푼 20%로 배분 (타이핑 위주)
 // 한쪽이 모자라면 다른 쪽으로 자동 보충해 자리를 낭비하지 않음
-// 복습 우선순위: 오래 안 본 것 먼저(last_seen 오름차순)
+// 복습 우선순위: 덜 익은 것(typing 5회 미만) 먼저 → 익숙한 것은 후순위 강등, 각 그룹 내 오래 안 본 것 우선
 async function startSession() {
   // 최신 데이터 재호출 (메모리 stats가 낡아 같은 문장이 반복되는 문제 방지)
   document.getElementById('app').innerHTML = `<div class="loading">세션 준비 중...</div>`;
@@ -294,15 +294,23 @@ async function startSession() {
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
   const wrong = shuffle(pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct));
   const unseen = shuffle(pool.filter(s => s.stats.attempts === 0));
+  // 복습 정렬: (1) 아직 덜 익은 것(typing 5회 미만) 먼저 · 익숙해진 것(5회+)은 뒤로 강등
+  //           (2) 같은 그룹 안에서는 오래 안 본 것 먼저(last_seen 오름차순)
+  const GRADUATE_TYPING = 5; // typing으로 이만큼 나오면 익숙한 것으로 보고 후순위로
   const review = pool.filter(s => s.stats.attempts > 0 && s.stats.ever_correct)
-    .sort((a, b) => String(a.stats.last_seen).localeCompare(String(b.stats.last_seen)));
+    .sort((a, b) => {
+      const ga = (a.stats.typing_count || 0) >= GRADUATE_TYPING ? 1 : 0;
+      const gb = (b.stats.typing_count || 0) >= GRADUATE_TYPING ? 1 : 0;
+      if (ga !== gb) return ga - gb; // 덜 익은 것(0)이 앞
+      return String(a.stats.last_seen).localeCompare(String(b.stats.last_seen));
+    });
 
   // 1) 틀린 문장 먼저 채움
   const picked = wrong.slice(0, selCount);
   let remaining = selCount - picked.length;
 
-  // 2) 남은 자리를 복습 40% : 안 푼 60%로 배분
-  let reviewQuota = Math.ceil(remaining * 0.4);
+  // 2) 남은 자리를 복습 80% : 안 푼 20%로 배분 (타이핑 위주 학습)
+  let reviewQuota = Math.ceil(remaining * 0.8);
   let unseenQuota = remaining - reviewQuota;
 
   // 3) 한쪽이 부족하면 다른 쪽으로 보충 (자리 낭비 방지)
