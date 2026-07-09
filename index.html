@@ -274,10 +274,22 @@ function renderStart() {
 function setCount(n) { selCount = n; renderStart(); }
 
 // ===== 세션 구성 =====
+// 세션 시작 시 최신 데이터를 다시 불러온다 (직전 세션 결과를 반영해 같은 문장 반복 방지)
 // 틀린 문장(최우선) → 남은 자리를 복습 40%(올림) : 안 푼 60%로 배분
 // 한쪽이 모자라면 다른 쪽으로 자동 보충해 자리를 낭비하지 않음
 // 복습 우선순위: 오래 안 본 것 먼저(last_seen 오름차순)
-function startSession() {
+async function startSession() {
+  // 최신 데이터 재호출 (메모리 stats가 낡아 같은 문장이 반복되는 문제 방지)
+  document.getElementById('app').innerHTML = `<div class="loading">세션 준비 중...</div>`;
+  try {
+    const res = await fetch(`${GAS_URL}?action=getSentences`);
+    const data = await res.json();
+    if (data.sentences) allSentences = data.sentences;
+  } catch (err) {
+    // 재호출 실패 시 기존 메모리 데이터로 진행 (세션이 아예 막히진 않게)
+    console.error('세션 데이터 갱신 실패, 기존 데이터로 진행:', err);
+  }
+
   let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
   const wrong = shuffle(pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct));
