@@ -14,6 +14,36 @@
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
     background: #f3f2f1; color: #1a1a1a; min-height: 100vh; padding: 0; line-height: 1.6;
   }
+  /* 워크시트 격자 배경 (콘텐츠 뒤에 깔림) */
+  .xl-sheet {
+    background-color: #ffffff;
+    background-image:
+      linear-gradient(to right, #e6e6e6 1px, transparent 1px),
+      linear-gradient(to bottom, #e6e6e6 1px, transparent 1px);
+    background-size: 96px 26px;
+    background-position: 40px 0;
+    min-height: 100vh;
+    position: relative;
+  }
+  /* 열 머리글 (A B C ...) */
+  .xl-colhead {
+    display: flex; background: #f3f2f1; border-bottom: 1px solid #d0d0d0;
+    font-size: 11px; color: #888; padding-left: 40px;
+  }
+  .xl-colhead span {
+    width: 96px; text-align: center; padding: 3px 0; border-right: 1px solid #e0e0e0;
+    flex-shrink: 0;
+  }
+  /* 행 번호 열 (왼쪽 세로 1 2 3 ...) */
+  .xl-rowhead {
+    position: absolute; left: 0; top: 0; width: 40px; bottom: 0;
+    background: #f3f2f1; border-right: 1px solid #d0d0d0;
+    font-size: 11px; color: #888; z-index: 0;
+  }
+  .xl-rowhead span {
+    display: block; height: 26px; line-height: 26px; text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+  }
   /* 엑셀 위장 프레임 */
   .xl-titlebar {
     background: #217346; color: #fff; font-size: 12px; padding: 5px 14px;
@@ -31,13 +61,7 @@
     display: flex; align-items: center; gap: 10px; font-size: 12px; color: #888;
   }
   .xl-formula .xl-cellref { border: 1px solid #d0d0d0; border-radius: 2px; padding: 2px 10px; min-width: 44px; color: #666; }
-  .xl-sheettabs {
-    background: #f3f2f1; border-top: 1px solid #d0d0d0; padding: 4px 12px;
-    display: flex; gap: 4px; align-items: center; font-size: 11px;
-  }
-  .xl-sheettabs span { padding: 3px 12px; color: #666; cursor: pointer; }
-  .xl-sheettabs span.on { background: #fff; border: 1px solid #d0d0d0; border-bottom: 2px solid #217346; color: #217346; font-weight: 600; }
-  .container { max-width: 760px; margin: 0 auto; padding: 20px; }
+  .container { max-width: 760px; margin: 0 auto; padding: 20px 20px 20px 56px; position: relative; z-index: 1; }
   .header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #d8d8d8;
@@ -232,20 +256,26 @@
     <span><i>fx</i></span>
     <span style="color:#bbb;">=VLOOKUP(...)</span>
   </div>
-  <div class="container">
-    <div class="header">
-      <div class="title" onclick="goHome()">STEALTH AL</div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <input type="text" id="lookupInput" class="lookup-input" placeholder="단어 뜻 찾기" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();doLookup();}">
-        <div class="progress" id="progress"></div>
-      </div>
+  <div class="xl-colhead">
+    <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
+  </div>
+  <div class="xl-sheet">
+    <div class="xl-rowhead">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+      <span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span>
+      <span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span>
     </div>
-    <div id="lookup-result"></div>
-    <div id="app"><div class="loading">불러오는 중...</div></div>
-    <div class="hint-bar" id="hintbar"></div>
-    <div class="xl-sheettabs">
-      <span class="on">Sheet1</span><span>Sheet2</span><span>Summary</span>
-      <span style="margin-left:auto; color:#999;">Ready · 100%</span>
+    <div class="container">
+      <div class="header">
+        <div class="title" onclick="goHome()">STEALTH AL</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="text" id="lookupInput" class="lookup-input" placeholder="단어 뜻 찾기" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();doLookup();}">
+          <div class="progress" id="progress"></div>
+        </div>
+      </div>
+      <div id="lookup-result"></div>
+      <div id="app"><div class="loading">불러오는 중...</div></div>
+      <div class="hint-bar" id="hintbar"></div>
     </div>
   </div>
 
