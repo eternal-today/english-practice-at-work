@@ -974,6 +974,7 @@ async function openDiagnoses(tab) {
   let body = '';
   if (view === 'history') {
     body = _diagItems.map(d => {
+      const strs = (d.strengths || []).map(x => `<li style="margin-bottom:3px;">${escapeHtml(x)}</li>`).join('');
       const imps = (d.improvements || []).map(x => `<li style="margin-bottom:3px;">${escapeHtml(x)}</li>`).join('');
       return `
         <div style="text-align:left; padding:14px 16px; background:#fff; border:1px solid #e5e5e5; border-radius:8px; margin-bottom:12px;">
@@ -982,7 +983,7 @@ async function openDiagnoses(tab) {
             <span style="font-size:11px; color:#aaa;">${escapeHtml(String(d.created_at))} · ${d.range_start}~${d.range_end}번째</span>
           </div>
           <div style="font-size:13px; color:#555; margin-bottom:8px;">${escapeHtml(d.level_reason || '')}</div>
-          ${d.strengths ? `<div style="font-size:12px; color:#999; font-weight:600;">잘하는 점</div><div style="font-size:13px; color:#2a5a2a; margin-bottom:6px;">${escapeHtml(d.strengths)}</div>` : ''}
+          ${strs ? `<div style="font-size:12px; color:#999; font-weight:600;">잘하는 점</div><ul style="font-size:13px; color:#2a5a2a; margin:0 0 6px 18px; padding:0;">${strs}</ul>` : ''}
           ${imps ? `<div style="font-size:12px; color:#999; font-weight:600;">보완점</div><ul style="font-size:13px; color:#8a5a1a; margin:0 0 6px 18px; padding:0;">${imps}</ul>` : ''}
           ${d.next_focus ? `<div style="font-size:12px; color:#999; font-weight:600;">다음 집중 방향</div><div style="font-size:13px; color:#1a5a3a;">${escapeHtml(d.next_focus)}</div>` : ''}
         </div>`;
@@ -1230,6 +1231,7 @@ async function runDiagnoseIfReady() {
     const data = await res.json();
     if (data.ready && data.diagnosis) {
       const d = data.diagnosis;
+      const strs = (d.strengths || []).map(x => `<li style="margin-bottom:3px;">${escapeHtml(x)}</li>`).join('');
       const imps = (d.improvements || []).map(x => `<li style="margin-bottom:3px;">${escapeHtml(x)}</li>`).join('');
       area.innerHTML = `
         <div style="text-align:left; padding:16px; background:#fff; border:1px solid #d8e2ea; border-radius:8px;">
@@ -1239,7 +1241,7 @@ async function runDiagnoseIfReady() {
           <div style="font-size:18px; font-weight:700; color:#1a5a3a; margin-bottom:2px;">${escapeHtml(d.level)} <span style="font-size:12px; font-weight:400; color:#999;">(작문 기준 추정)</span></div>
           <div style="font-size:13px; color:#555; margin-bottom:10px;">${escapeHtml(d.level_reason || '')}</div>
           <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">잘하는 점</div>
-          <div style="font-size:13px; color:#2a5a2a; margin-bottom:10px;">${escapeHtml(d.strengths || '')}</div>
+          <ul style="font-size:13px; color:#2a5a2a; margin:0 0 10px 18px; padding:0;">${strs}</ul>
           <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">보완점</div>
           <ul style="font-size:13px; color:#8a5a1a; margin:0 0 10px 18px; padding:0;">${imps}</ul>
           <div style="font-size:12px; color:#999; font-weight:600; margin-bottom:2px;">다음 집중 방향</div>
