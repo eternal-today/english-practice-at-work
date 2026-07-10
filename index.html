@@ -293,7 +293,15 @@ async function startSession() {
     console.error('세션 데이터 갱신 실패, 기존 데이터로 진행:', err);
   }
 
+  // 오늘(YYYY-MM-DD)보다 mute_until이 크거나 같으면 아직 뮤트 중 → 세션에서 제외
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   let pool = allSentences.filter(s => s.chunks.length <= KEY_MAP.length);
+  pool = pool.filter(s => {
+    if (!s.mute_until) return true;
+    const mu = String(s.mute_until).slice(0, 10); // 'YYYY-MM-DD' 또는 ISO 앞부분
+    return mu < todayStr; // 오늘이 지났으면 포함, 아직이면 제외
+  });
   if (selTag !== 'All') pool = pool.filter(s => String(s.tags).includes(selTag));
   const wrong = shuffle(pool.filter(s => s.stats.attempts > 0 && !s.stats.ever_correct));
   const unseen = shuffle(pool.filter(s => s.stats.attempts === 0));
@@ -471,7 +479,7 @@ async function checkTyping() {
       isAnswered = true;
       document.getElementById('typingInput').disabled = true;
       fetchPatternNote(s.id);
-      renderCollectButton(s);
+      renderCollectButton(s, true);
     } else {
       document.getElementById('submitBtn').disabled = false;
     }
@@ -657,10 +665,33 @@ async function requestScrambleHint(s, userText) {
 }
 
 // ===== 수집 UI =====
-function renderCollectButton(s) {
+function renderCollectButton(s, showMute) {
   const area = document.getElementById('collect-area');
   if (!area) return;
-  area.innerHTML = `<button class="mini" onclick="openCollectBox('${s.id}')">+ 표현 수집</button>`;
+  const muteBtn = showMute
+    ? `<button class="mini" onclick="muteSentence('${s.id}')" id="muteBtn-${s.id}" style="margin-left:8px;">이미 익숙함 · 5일간 안 보기</button>`
+    : '';
+  area.innerHTML = `<button class="mini" onclick="openCollectBox('${s.id}')">+ 표현 수집</button>${muteBtn}<span id="mute-status" class="spinner-text" style="margin-left:8px;"></span>`;
+}
+async function muteSentence(sentenceId) {
+  const btn = document.getElementById(`muteBtn-${sentenceId}`);
+  const status = document.getElementById('mute-status');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = '처리 중...';
+  try {
+    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'muteSentence', sentence_id: sentenceId }) });
+    const data = await res.json();
+    if (data.success) {
+      if (btn) btn.textContent = `${data.mute_until}까지 숨김`;
+      if (status) status.textContent = '';
+    } else {
+      if (status) status.textContent = '실패: ' + (data.error || '');
+      if (btn) btn.disabled = false;
+    }
+  } catch (err) {
+    if (status) status.textContent = '오류: ' + err.message;
+    if (btn) btn.disabled = false;
+  }
 }
 function openCollectBox(sentenceId) {
   const area = document.getElementById('collect-area');
